@@ -59,27 +59,36 @@ langchain_tool = LangchainTool(stack_exchange_tool)
 # ----- Example of a Google Cloud Tool (MCP Toolbox for Databases) -----
 TOOLBOX_URL = os.getenv("MCP_TOOLBOX_URL", "http://127.0.0.1:5000")
 
-# Initialize Toolbox client
-toolbox = ToolboxSyncClient(TOOLBOX_URL)
-# Load all the tools from toolset
-toolbox_tools = toolbox.load_toolset("tickets_toolset")
+# Initialize Toolbox client and load tools
+# If the toolbox server is not available (e.g., in CI), set to empty list
+try:
+    toolbox = ToolboxSyncClient(TOOLBOX_URL)
+    toolbox_tools = toolbox.load_toolset("tickets_toolset")
+except Exception:
+    # Toolbox server not available, set to empty list
+    toolbox_tools = []
 
 
 # ----- Example of an MCP Tool (streamable-http) -----
-mcp_tools = MCPToolset(
-    connection_params=StreamableHTTPConnectionParams(
-        url="https://api.githubcopilot.com/mcp/",
-        headers={
-            "Authorization": "Bearer " + os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN"),
-        },
-    ),
-    # Read only tools
-    tool_filter=[
-        "search_repositories",
-        "search_issues",
-        "list_issues",
-        "get_issue",
-        "list_pull_requests",
-        "get_pull_request",
-    ],
-)
+# If GitHub token is not available (e.g., in CI), set to None
+try:
+    mcp_tools = MCPToolset(
+        connection_params=StreamableHTTPConnectionParams(
+            url="https://api.githubcopilot.com/mcp/",
+            headers={
+                "Authorization": "Bearer " + os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN"),
+            },
+        ),
+        # Read only tools
+        tool_filter=[
+            "search_repositories",
+            "search_issues",
+            "list_issues",
+            "get_issue",
+            "list_pull_requests",
+            "get_pull_request",
+        ],
+    )
+except Exception:
+    # GitHub MCP server not available or token missing
+    mcp_tools = None

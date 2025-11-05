@@ -36,11 +36,16 @@ This diagram outlines the agent's workflow, designed to provide informed and con
 ### Prerequisites
 
 *   **Google Cloud Account:** You need a Google Cloud account.
-*   **Python 3.9+:** Ensure you have Python 3.9 or a later version installed.
-*   **Poetry:** Install Poetry by following the instructions on the official Poetry website: [https://python-poetry.org/docs/](https://python-poetry.org/docs/)
+*   **Python 3.10+:** Ensure you have Python 3.10 or a later version installed.
+*   **uv:** For dependency management and packaging. Please follow the instructions on the official [uv website](https://docs.astral.sh/uv/) for installation.
+
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+
 *   **Git:** Ensure you have git installed.
 
-### Project Setup with Poetry
+### Project Setup
 
 1.  **Clone the Repository:**
 
@@ -49,38 +54,20 @@ This diagram outlines the agent's workflow, designed to provide informed and con
     cd adk-samples/python/agents/RAG
     ```
 
-2.  **Install Dependencies with Poetry:**
-
-    **Note for Linux users:** If you get an error related to `keyring` during the installation, you can disable it by running the following command:
-    ```bash
-    poetry config keyring.enabled false
-    ```
-    This is a one-time setup.
+2.  **Install Dependencies:**
 
     ```bash
-    poetry install
+    uv sync
     ```
 
-    This command reads the `pyproject.toml` file and installs all the necessary dependencies into a virtual environment managed by Poetry.
+    This command reads the `pyproject.toml` file and installs all the necessary dependencies into a virtual environment.
 
-3.  **Activate the Poetry Shell:**
-
-    ```bash
-    poetry env activate
-    ```
-
-    This activates the virtual environment, allowing you to run commands within the project's environment.
-    Make sure the environment is active. If not, you can also activate it through 
-
-     ```bash
-    source .venv/bin/activate 
-    ```   
-4.  **Set up Environment Variables:**
+3.  **Set up Environment Variables:**
     Rename the file ".env.example" to ".env" 
     Follow the steps in the file to set up the environment variables.
 
-5. **Setup Corpus:**
-    If you have an existing corpus in Vertex AI RAG Engine, please set corpus information in your .env file. For example: RAG_CORPUS='projects/123/locations/us-central1/ragCorpora/456'. 
+4. **Setup Corpus:**
+    If you have an existing corpus in Vertex AI RAG Engine, please set corpus information in your .env file. For example: RAG_CORPUS='projects/123/locations/us-central1/ragCorpora/456'.
 
     If you don't have a corpus setup yet, please follow "How to upload my file to my RAG corpus" section. The `prepare_corpus_and_data.py` script will automatically create a corpus (if needed) and update the `RAG_CORPUS` variable in your `.env` file with the resource name of the created or retrieved corpus.
 
@@ -104,7 +91,7 @@ The `rag/shared_libraries/prepare_corpus_and_data.py` script helps you set up a 
     *   **To use the default behavior (upload Alphabet's 10K PDF):**
         Simply run the script:
         ```bash
-        python rag/shared_libraries/prepare_corpus_and_data.py
+        uv run python rag/shared_libraries/prepare_corpus_and_data.py
         ```
         This will create a corpus named `Alphabet_10K_2024_corpus` (if it doesn't exist) and upload the PDF `goog-10-k-2024.pdf` downloaded from the URL specified in the script.
 
@@ -122,7 +109,7 @@ The `rag/shared_libraries/prepare_corpus_and_data.py` script helps you set up a 
            ```
         c. Run the script:
            ```bash
-           python rag/shared_libraries/prepare_corpus_and_data.py
+           uv run python rag/shared_libraries/prepare_corpus_and_data.py
            ```
 
     *   **To upload a local PDF file:**
@@ -155,7 +142,7 @@ The `rag/shared_libraries/prepare_corpus_and_data.py` script helps you set up a 
            ```
         d. Run the script:
            ```bash
-           python rag/shared_libraries/prepare_corpus_and_data.py
+           uv run python rag/shared_libraries/prepare_corpus_and_data.py
            ```
 
 More details about managing data in Vertex RAG Engine can be found in the
@@ -196,8 +183,9 @@ Agent: According to Alphabet's 2024 10-K report, the key business segments are:
 The evaluation can be run from the `RAG` directory using
 the `pytest` module:
 
-```
-poetry run pytest eval
+```bash
+uv sync --dev
+uv run pytest eval
 ```
 
 ### Evaluation Process
@@ -229,8 +217,8 @@ This evaluation helps ensure the agent correctly leverages the RAG capabilities 
 The Agent can be deployed to Vertex AI Agent Engine using the following
 commands:
 
-```
-python deployment/deploy.py
+```bash
+uv run python deployment/deploy.py
 ```
 
 After deploying the agent, you'll be able to read the following INFO log message:
@@ -273,7 +261,7 @@ After deploying the agent, follow these steps to test it:
 3. **Test the Remote Agent:**
    - Run the test script:
      ```bash
-     python deployment/run.py
+     uv run python deployment/run.py
      ```
    This script will:
    - Connect to your deployed agent
@@ -281,6 +269,32 @@ After deploying the agent, follow these steps to test it:
    - Display the agent's responses with proper formatting
 
 The test script includes example queries about Alphabet's 10-K report. You can modify the queries in `deployment/run.py` to test different aspects of your deployed agent.
+
+### Alternative: Using Agent Starter Pack
+
+You can also use the [Agent Starter Pack](https://goo.gle/agent-starter-pack) to create a production-ready version of this agent with additional deployment options:
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv && source .venv/bin/activate # On Windows: .venv\Scripts\activate
+
+# Install the starter pack and create your project
+pip install --upgrade agent-starter-pack
+agent-starter-pack create my-rag-agent -a adk@rag
+```
+
+<details>
+<summary>⚡️ Alternative: Using uv</summary>
+
+If you have [`uv`](https://github.com/astral-sh/uv) installed, you can create and set up your project with a single command:
+```bash
+uvx agent-starter-pack create my-rag-agent -a adk@rag
+```
+This command handles creating the project without needing to pre-install the package into a virtual environment.
+
+</details>
+
+The starter pack will prompt you to select deployment options and provides additional production-ready features including automated CI/CD deployment scripts.
 
 ## Customization
 

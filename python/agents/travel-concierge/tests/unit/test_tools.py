@@ -14,6 +14,7 @@
 
 """Basic tests for individual tools."""
 
+import os
 import unittest
 
 from dotenv import load_dotenv
@@ -68,6 +69,10 @@ class TestAgents(unittest.TestCase):
             self.tool_context.state["itinerary_datetime"], "12/31/2025 11:59:59"
         )
 
+    @pytest.mark.skipif(
+        not os.getenv("GOOGLE_PLACES_API_KEY"),
+        reason="Google Places API key not available"
+    )
     def test_places(self):
         self.tool_context.state["poi"] = {
             "places": [{"place_name": "Machu Picchu", "address": "Machu Picchu, Peru"}]

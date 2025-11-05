@@ -90,11 +90,14 @@ Expand on the "Key Components" from above.
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - Google Cloud Project (for Vertex AI integration)
 - API Key for [Google Maps Platform Places API](https://developers.google.com/maps/documentation/places/web-service/get-api-key)
 - Google Agent Development Kit 1.0+
-- Poetry: Install Poetry by following the instructions on the official Poetry [website](https://python-poetry.org/docs/)
+- uv: Install uv by following the instructions on the official uv [website](https://docs.astral.sh/uv/)
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
 
 ### Installation
 
@@ -106,15 +109,10 @@ Expand on the "Key Components" from above.
     ```
     NOTE: From here on, all command-line instructions shall be executed under the directory  `travel-concierge/` unless otherwise stated.
 
-2.  Install dependencies using Poetry or pip:
+2.  Install dependencies:
 
-    **Note for Linux users:** If you get an error related to `keyring` during the installation, you can disable it by running the following command:
     ```bash
-    poetry config keyring.enabled false
-    ```
-    This is a one-time setup.
-    ```bash
-    poetry install
+    uv sync
     ```
 
 3.  Set up Google Cloud credentials:
@@ -227,21 +225,21 @@ Without specifically optimizing for such usage, this cohort of agents seem to be
 
 To run the illustrative tests and evaluations, install the extra dependencies and run `pytest`:
 
-```
-poetry install --with dev
-pytest
+```bash
+uv sync --dev
+uv run pytest
 ```
 
 The different tests can also be run separately:
 
 To run the unit tests, just checking all agents and tools responds:
-```
-pytest tests
+```bash
+uv run pytest tests
 ```
 
 To run agent trajectory tests:
-```
-pytest eval
+```bash
+uv run pytest eval
 ```
 
 ## Deploying the Agent
@@ -249,8 +247,8 @@ pytest eval
 To deploy the agent to Vertex AI Agent Engine, run the following command under `travel-concierge`:
 
 ```bash
-poetry install --with deployment
-python deployment/deploy.py --create
+uv sync --group deployment
+uv run python deployment/deploy.py --create
 ```
 When this command returns, if it succeeds it will print an AgentEngine resource
 id that looks something like this:
@@ -258,17 +256,43 @@ id that looks something like this:
 projects/************/locations/us-central1/reasoningEngines/7737333693403889664
 ```
 
-To quickly test that the agent has successfully deployed, 
+To quickly test that the agent has successfully deployed,
 run the following command for one turn with the agent "Looking for inspirations around the Americas":
 ```bash
-python deployment/deploy.py --quicktest --resource_id=<RESOURCE_ID>
+uv run python deployment/deploy.py --quicktest --resource_id=<RESOURCE_ID>
 ```
 This will return a stream of JSON payload indicating the deployed agent is functional.
 
 To delete the agent, run the following command (using the resource ID returned previously):
 ```bash
-python3 deployment/deploy.py --delete --resource_id=<RESOURCE_ID>
+uv run python deployment/deploy.py --delete --resource_id=<RESOURCE_ID>
 ```
+
+### Alternative: Using Agent Starter Pack
+
+You can also use the [Agent Starter Pack](https://goo.gle/agent-starter-pack) to create a production-ready version of this agent with additional deployment options:
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv && source .venv/bin/activate # On Windows: .venv\Scripts\activate
+
+# Install the starter pack and create your project
+pip install --upgrade agent-starter-pack
+agent-starter-pack create my-travel-concierge -a adk@travel-concierge
+```
+
+<details>
+<summary>⚡️ Alternative: Using uv</summary>
+
+If you have [`uv`](https://github.com/astral-sh/uv) installed, you can create and set up your project with a single command:
+```bash
+uvx agent-starter-pack create my-travel-concierge -a adk@travel-concierge
+```
+This command handles creating the project without needing to pre-install the package into a virtual environment.
+
+</details>
+
+The starter pack will prompt you to select deployment options and provides additional production-ready features including automated CI/CD deployment scripts.
 
 ## Application Development
 

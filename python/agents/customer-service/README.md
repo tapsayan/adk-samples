@@ -86,9 +86,9 @@ The agent has access to the following tools:
 
 ### Prerequisites
 
-- Python 3.11+
-- Poetry (for dependency management)
-- Google ADK SDK (installed via Poetry)
+- Python 3.10+
+- uv (for dependency management)
+- Google ADK SDK (installed via uv)
 - Google Cloud Project (for Vertex AI Gemini integration)
 
 ### Installation
@@ -107,6 +107,11 @@ The agent has access to the following tools:
     gcloud services enable aiplatform.googleapis.com
     ```
 
+    Install uv for dependency management:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+
 1.  Clone the repository:
 
     ```bash
@@ -116,25 +121,11 @@ The agent has access to the following tools:
 
     For the rest of this tutorial **ensure you remain in the `agents/customer-service` directory**.
 
-2.  Install dependencies using Poetry:
+2.  Install dependencies:
 
-- if you have not installed poetry before then run `pip install poetry` first. then you can create your virtual environment and install all dependencies using:
-
-  **Note for Linux users:** If you get an error related to `keyring` during the installation, you can disable it by running the following command:
-  ```bash
-  poetry config keyring.enabled false
-  ```
-  This is a one-time setup.
-
-  ```bash
-  poetry install
-  ```
-
-  To activate the virtual environment run:
-
-  ```bash
-  poetry env activate
-  ```
+    ```bash
+    uv sync
+    ```
 
 3.  Set up Google Cloud credentials:
 
@@ -214,7 +205,8 @@ Evaluation tests assess the overall performance and capabilities of the agent in
 1.  **Run Evaluation Tests:**
 
     ```bash
-    pytest eval
+    uv sync --dev
+    uv run pytest eval
     ```
 
     - This command executes all test files within the `eval` directory.
@@ -228,7 +220,7 @@ Unit tests focus on testing individual units or components of the code in isolat
 1.  **Run Unit Tests:**
 
     ```bash
-    pytest tests/unit
+    uv run pytest tests/unit
     ```
 
     - This command executes all test files within the `tests/unit` directory.
@@ -244,7 +236,7 @@ In order to inherit all dependencies of your agent you can build the wheel file 
 1.  **Build Customer Service Agent WHL file**
 
     ```bash
-    poetry build --format=wheel --output=deployment
+    uv build --wheel --out-dir deployment
     ```
 
 1.  **Deploy the agent to agents engine**
@@ -252,14 +244,14 @@ In order to inherit all dependencies of your agent you can build the wheel file 
 
     ```bash
     cd deployment
-    python deploy.py
+    uv run python deploy.py
     ```
 
 ### Testing deployment
 
 This code snippet is an example of how to test the deployed agent.
 
-```
+```python
 import vertexai
 from customer_service.config import Config
 from vertexai.preview.reasoning_engines import AdkApp
@@ -283,6 +275,32 @@ for event in remote_agent.stream_query(
     print(event)
 
 ```
+
+### Alternative: Using Agent Starter Pack
+
+You can also use the [Agent Starter Pack](https://goo.gle/agent-starter-pack) to create a production-ready version of this agent with additional deployment options:
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv && source .venv/bin/activate # On Windows: .venv\Scripts\activate
+
+# Install the starter pack and create your project
+pip install --upgrade agent-starter-pack
+agent-starter-pack create my-customer-service -a adk@customer-service
+```
+
+<details>
+<summary>⚡️ Alternative: Using uv</summary>
+
+If you have [`uv`](https://github.com/astral-sh/uv) installed, you can create and set up your project with a single command:
+```bash
+uvx agent-starter-pack create my-customer-service -a adk@customer-service
+```
+This command handles creating the project without needing to pre-install the package into a virtual environment.
+
+</details>
+
+The starter pack will prompt you to select deployment options and provides additional production-ready features including automated CI/CD deployment scripts.
 
 ## Disclaimer
 

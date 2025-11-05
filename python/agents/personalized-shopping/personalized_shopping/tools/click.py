@@ -15,7 +15,7 @@
 from google.adk.tools import ToolContext
 from google.genai import types
 
-from ..shared_libraries.init_env import webshop_env
+from ..shared_libraries.init_env import get_webshop_env
 
 
 async def click(button_name: str, tool_context: ToolContext) -> str:
@@ -28,6 +28,7 @@ async def click(button_name: str, tool_context: ToolContext) -> str:
     Returns:
       str: The webpage after clicking the button.
     """
+    webshop_env = get_webshop_env()
     status = {"reward": None, "done": False}
     action_string = f"click[{button_name}]"
     _, status["reward"], status["done"], _ = webshop_env.step(action_string)

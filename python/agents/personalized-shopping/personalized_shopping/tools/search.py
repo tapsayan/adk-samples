@@ -15,7 +15,7 @@
 from google.adk.tools import ToolContext
 from google.genai import types
 
-from ..shared_libraries.init_env import webshop_env
+from ..shared_libraries.init_env import get_webshop_env
 
 
 async def search(keywords: str, tool_context: ToolContext) -> str:
@@ -28,6 +28,7 @@ async def search(keywords: str, tool_context: ToolContext) -> str:
     Returns:
       str: The search result displayed in a webpage.
     """
+    webshop_env = get_webshop_env()
     status = {"reward": None, "done": False}
     action_string = f"search[{keywords}]"
     webshop_env.server.assigned_instruction_text = f"Find me {keywords}."

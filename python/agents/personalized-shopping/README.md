@@ -53,29 +53,22 @@ The key features of the personalized-shopping agent include:
 
 ## Setup and Installation
 
-IMPORTANT HIGHLIGHTS:
-* You should be using [poetry](https://python-poetry.org/docs/) for dependency management and packaging in Python
-* Your repo should contain a .env example file highlighting what environmental variables are used and how to active .env
-
 1.  **Prerequisites:**
 
-* To begin with, please firstly _clone this repo_, then install the required packages with the poetry command below.
+* Python 3.10+
+* uv for dependency management
+
+* Install uv:
 
     ```bash
-    cd ~
-    python3 -m venv myenv
-    source ~/myenv/bin/activate
-    pip install poetry
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-* Then go to the project folder, and run this:
+* Clone this repo and install dependencies:
 
     ```bash
     cd adk-samples/python/agents/personalized-shopping
-    # Note for Linux users: If you get an error related to `keyring` during the installation, you can disable it by running the following command:
-    # poetry config keyring.enabled false
-    # This is a one-time setup.
-    poetry install
+    uv sync
     ```
 
 2.  **Installation:**
@@ -109,7 +102,7 @@ IMPORTANT HIGHLIGHTS:
     # Convert items.json => required doc format
     cd ../search_engine
     mkdir -p resources_100 resources_1k resources_10k resources_50k
-    python convert_product_file_format.py
+    uv run python convert_product_file_format.py
 
     # Index the products
     mkdir -p indexes
@@ -167,7 +160,8 @@ The evaluation of the agent can be run from the `personalized-shopping` director
 the `pytest` module:
 
 ```bash
-python3 -m pytest eval
+uv sync --dev
+uv run pytest eval
 ```
 
 You can add more eval prompts by adding your dataset into the `eval/eval_data` folder.
@@ -175,7 +169,7 @@ You can add more eval prompts by adding your dataset into the `eval/eval_data` f
 To run unittest for tools, you can run the following command from the `personalized-shopping` directory:
 
 ```bash
-python3 -m pytest tests
+uv run pytest tests
 ```
 
 ## Deployment
@@ -186,14 +180,14 @@ python3 -m pytest tests
 
     ```bash
     cd agents/personalized-shopping
-    poetry build --format=wheel --output=deployment
+    uv build --wheel --out-dir deployment
     ```
 
 1.  **Deploy the Agent to Agents Engine**
 
     ```bash
     cd agents/personalized-shopping/deployment
-    python3 deploy.py
+    uv run python deploy.py
     ```
 
     > **Note**: This process could take more than 10 minutes to finish, please be patient.
@@ -211,7 +205,7 @@ import dotenv
 dotenv.load_dotenv()  # May skip if you have exported environment variables.
 from vertexai import agent_engines
 
-agent_engine_id = "AGENT_ENGINE_ID" #Remember to update the ID here. 
+agent_engine_id = "AGENT_ENGINE_ID" #Remember to update the ID here.
 user_input = "Hello, can you help me find a summer dress? I want something flowy and floral."
 
 agent_engine = agent_engines.get(agent_engine_id)
@@ -226,8 +220,34 @@ for event in agent_engine.stream_query(
 To delete the deployed agent, you may run the following command:
 
 ```bash
-python3 deployment/deploy.py --delete --resource_id=${AGENT_ENGINE_ID}
+uv run python deployment/deploy.py --delete --resource_id=${AGENT_ENGINE_ID}
 ```
+
+### Alternative: Using Agent Starter Pack
+
+You can also use the [Agent Starter Pack](https://goo.gle/agent-starter-pack) to create a production-ready version of this agent with additional deployment options:
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv && source .venv/bin/activate # On Windows: .venv\Scripts\activate
+
+# Install the starter pack and create your project
+pip install --upgrade agent-starter-pack
+agent-starter-pack create my-personalized-shopping -a adk@personalized-shopping
+```
+
+<details>
+<summary>⚡️ Alternative: Using uv</summary>
+
+If you have [`uv`](https://github.com/astral-sh/uv) installed, you can create and set up your project with a single command:
+```bash
+uvx agent-starter-pack create my-personalized-shopping -a adk@personalized-shopping
+```
+This command handles creating the project without needing to pre-install the package into a virtual environment.
+
+</details>
+
+The starter pack will prompt you to select deployment options and provides additional production-ready features including automated CI/CD deployment scripts.
 
 ## Customization
 
