@@ -18,7 +18,7 @@ wheels = [
 
 [[package]]
 name = "agent-starter-pack"
-version = "0.20.2"
+version = "0.20.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -30,9 +30,9 @@ dependencies = [
     { name = "rich" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/fe/a10861f7929c0bd787d751a4b828aa7231677beb7ec3e6bf9118fdedb7b5/agent_starter_pack-0.20.2.tar.gz", hash = "sha256:7d7f65f879dca25d0a6037d1c5074e5a4e0eeb06de72c0488993fc0dfc35fe47", size = 11628378, upload-time = "2025-11-07T19:31:55.887Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/0a/b5a8c3aaf57f2f1b16a6a211ada6e4541977db685c470a97e506a9ac8566/agent_starter_pack-0.20.4.tar.gz", hash = "sha256:b60560a30023dd8916a28c5735d90d8c9f10045ed02edd9451f20c33ec9691db", size = 11629084, upload-time = "2025-11-12T21:32:58.022Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/57/5e/ba98e0903471da4aedf8cd847244e35dd56ad76913f31df53f3474bfc360/agent_starter_pack-0.20.2-py3-none-any.whl", hash = "sha256:0ee10815557dc9e9a4403bb0b76a213d3318d3520520e0abe39da79b00546dd2", size = 3665492, upload-time = "2025-11-07T19:31:52.308Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/af/7da52974c75996b62648f90deeb63a9d9a4337d1f8dbe86da69c15dd0c02/agent_starter_pack-0.20.4-py3-none-any.whl", hash = "sha256:9e205cf490f0402471680527060b66ee2d5386315a3dafa3c89411a47201de94", size = 3666138, upload-time = "2025-11-12T21:32:54.083Z" },
 ]
 
 [[package]]
@@ -293,7 +293,7 @@ dev = [
     { name = "google-adk", extras = ["eval"], specifier = ">=1.0.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "pytest", specifier = "~=8.4.2" },
-    { name = "pytest-asyncio", specifier = "~=1.2.0" },
+    { name = "pytest-asyncio", specifier = "~=1.3.0" },
 ]
 
 [[package]]
@@ -2359,16 +2359,16 @@ wheels = [
 
 [[package]]
 name = "pytest-asyncio"
-version = "1.2.0"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-asyncio-runner", marker = "python_full_version < '3.11'" },
     { name = "pytest" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/86/9e3c5f48f7b7b638b216e4b9e645f54d199d7abbbab7a64a13b4e12ba10f/pytest_asyncio-1.2.0.tar.gz", hash = "sha256:c609a64a2a8768462d0c99811ddb8bd2583c33fd33cf7f21af1c142e824ffb57", size = 50119, upload-time = "2025-09-12T07:33:53.816Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/2c/8af215c0f776415f3590cac4f9086ccefd6fd463befeae41cd4d3f193e5a/pytest_asyncio-1.3.0.tar.gz", hash = "sha256:d7f52f36d231b80ee124cd216ffb19369aa168fc10095013c6b014a34d3ee9e5", size = 50087, upload-time = "2025-11-10T16:07:47.256Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/93/2fa34714b7a4ae72f2f8dad66ba17dd9a2c793220719e736dda28b7aec27/pytest_asyncio-1.2.0-py3-none-any.whl", hash = "sha256:8e17ae5e46d8e7efe51ab6494dd2010f4ca8dae51652aa3c8d55acf50bfb2e99", size = 15095, upload-time = "2025-09-12T07:33:52.639Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl", hash = "sha256:611e26147c7f77640e6d0a92a38ed17c3e9848063698d5c93d5aa7aa11cebff5", size = 15075, upload-time = "2025-11-10T16:07:45.537Z" },
 ]
 
 [[package]]
