@@ -1,13 +1,15 @@
+"""Utils.py file"""
+
 import os
 import getpass
-from typing import Dict
 from dotenv import load_dotenv
 
 load_dotenv()
 
 USER_AGENT = "GitHub-Downloader-ADK/2.0"
 
-def _create_github_headers(token: str = "") -> Dict[str, str]:
+
+def _create_github_headers(token: str = "") -> dict[str, str]:
     """
     Creates a standard set of headers for GitHub API requests.
 
@@ -20,13 +22,11 @@ def _create_github_headers(token: str = "") -> Dict[str, str]:
     Returns:
         Dict[str, str]: A dictionary containing the HTTP headers.
     """
-    headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': USER_AGENT
-    }
+    headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": USER_AGENT}
     if token:
-        headers['Authorization'] = f'Bearer {token}'
+        headers["Authorization"] = f"Bearer {token}"
     return headers
+
 
 def _get_auth_token(token: str = "") -> str:
     """
@@ -48,6 +48,7 @@ def _get_auth_token(token: str = "") -> str:
         token = getpass.getpass("Enter your GitHub Personal Access Token: ")
     return token.strip()
 
+
 def _parse_repo_path(repository: str) -> tuple[str | None, str | None]:
     """
     Parses a repository string to extract the owner and repository name.
@@ -62,10 +63,10 @@ def _parse_repo_path(repository: str) -> tuple[str | None, str | None]:
         tuple[str | None, str | None]: A tuple containing the owner and the repository name.
                                        Returns (None, None) if the format is invalid.
     """
-    if repository.startswith(('http://', 'https://')):
-        repo_path = repository.split('github.com/')[-1].rstrip('.git')
+    if repository.startswith(("http://", "https://")):
+        repo_path = repository.split("github.com/")[-1].rstrip(".git")
     else:
         repo_path = repository
-    if '/' not in repo_path:
+    if "/" not in repo_path:
         return None, None
-    return repo_path.split('/', 1)
+    return repo_path.split("/", 1)

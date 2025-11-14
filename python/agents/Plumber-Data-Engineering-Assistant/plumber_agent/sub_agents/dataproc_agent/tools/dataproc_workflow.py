@@ -1,19 +1,26 @@
-import google.cloud.dataproc_v1 as dataproc
+"""Module for managing Dataproc workflow templates."""
+
+from typing import Any
+import logging
+
 from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.dataproc_v1 import WorkflowTemplateServiceClient
-from typing import List, Dict, Any, Optional
-from google.cloud.dataproc_v1.types import (WorkflowTemplate,
-                                            WorkflowTemplatePlacement,
-                                            ManagedCluster, 
-                                            ClusterSelector, 
-                                            ClusterConfig, 
-                                            GceClusterConfig, 
-                                            InstanceGroupConfig, 
-                                            DiskConfig, 
-                                            SoftwareConfig,
-                                            PySparkJob,
-                                            SparkJob,
-                                            OrderedJob)
+from google.cloud.dataproc_v1.types import (
+    WorkflowTemplate,
+    WorkflowTemplatePlacement,
+    ManagedCluster,
+    ClusterSelector,
+    ClusterConfig,
+    GceClusterConfig,
+    InstanceGroupConfig,
+    DiskConfig,
+    SoftwareConfig,
+    PySparkJob,
+    SparkJob,
+    OrderedJob,
+)
+
+logger = logging.getLogger("plumber-agent")
 
 
 def get_workflow_template_client(region: str) -> WorkflowTemplateServiceClient:
@@ -32,13 +39,12 @@ def get_workflow_template_client(region: str) -> WorkflowTemplateServiceClient:
 
 
 def create_workflow_template(
-   project_id: str,
-   region: str,
-   template_id: str,
-   jobs: List[Dict[str, Any]],
-   managed_cluster_config: Optional[Dict[str, Any]] = None,
-   cluster_selector_labels: Optional[Dict[str, str]] = None,
-) -> dict:
+    project_id: str,
+    region: str,
+    template_id: str,
+    jobs: list[dict[str, Any]],
+    cluster_config: dict[str, Any],
+) -> dict[str, Any]:
     """
     Creates a Dataproc workflow template.
 
@@ -54,24 +60,30 @@ def create_workflow_template(
         A dictionary with the status of the workflow template creation.
     """
     if not jobs:
-        return {
-            "status": "error",
-            "message": "The 'jobs' list cannot be empty."
-        }
+        error_msg = "The 'jobs' list cannot be empty."
+        logger.error("Workflow template creation failed for '%s': %s", template_id, error_msg)
+        return {"status": "error", "message": error_msg}
+
+    managed_cluster_config = cluster_config.get("managed_cluster_config")
+    cluster_selector_labels = cluster_config.get("cluster_selector_labels")
 
     if not (managed_cluster_config or cluster_selector_labels):
+        error_msg = "You must specify either 'managed_cluster_config' or 'cluster_selector_labels'."
+        logger.error("Workflow template creation failed for '%s': %s", template_id, error_msg)
         return {
             "status": "error",
-            "message": "You must specify either 'managed_cluster_config' or 'cluster_selector_labels'."
+            "message": error_msg,
         }
 
     if managed_cluster_config and cluster_selector_labels:
+        error_msg = (
+            "'managed_cluster_config' and 'cluster_selector_labels' are "
+            "mutually exclusive. Please provide only one."
+        )
+        logger.error("Workflow template creation failed for '%s': %s", template_id, error_msg)
         return {
             "status": "error",
-            "message": (
-                "'managed_cluster_config' and 'cluster_selector_labels' are "
-                "mutually exclusive. Please provide only one."
-            )
+            "message": error_msg,
         }
 
     workflow_template_client = get_workflow_template_client(region)
@@ -102,17 +114,17 @@ def create_workflow_template(
                     machine_type_uri=managed_cluster_config.get("worker_machine_type"),
                     disk_config=DiskConfig(
                         boot_disk_size_gb=managed_cluster_config.get("worker_disk_size_gb")
-                    ) if managed_cluster_config.get("worker_disk_size_gb") else None,
+                    )
+                    if managed_cluster_config.get("worker_disk_size_gb")
+                    else None,
                 ),
                 software_config=SoftwareConfig(
                     image_version=managed_cluster_config.get("image_version"),
-                )
+                ),
             ),
         )
     elif cluster_selector_labels:
-        placement_config.cluster_selector = ClusterSelector(
-            cluster_labels=cluster_selector_labels
-        )
+        placement_config.cluster_selector = ClusterSelector(cluster_labels=cluster_selector_labels)
 
     template.placement = placement_config
 
@@ -143,30 +155,39 @@ def create_workflow_template(
 
             template_jobs.append(job_obj)
 
-        template.jobs.extend(template_jobs)
+        template.jobs = template_jobs
     try:
-        workflow_template_client.create_workflow_template(
-            parent=parent, template=template
-        )
+        workflow_template_client.create_workflow_template(parent=parent, template=template)
         return {
             "status": "success",
             "message": f"Workflow template '{template_id}' created successfully.",
             "template_id": template_id,
         }
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while creating workflow template '%s': %s",
+            template_id,
+            str(apierror),
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to create workflow template: {str(e)}"
+            "error_message": f"Failed to create workflow template: {str(apierror)}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while creating workflow template '%s': %s",
+            template_id,
+            str(e),
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred: {str(e)}"
+            "error_message": f"An unexpected error occurred: {str(e)}",
         }
 
 
-       
-def list_workflow_templates(project_id: str, region: str) -> dict:
+def list_workflow_templates(project_id: str, region: str) -> dict[str, Any]:
     """
     Lists all Dataproc workflow templates in a region.
 
@@ -178,34 +199,42 @@ def list_workflow_templates(project_id: str, region: str) -> dict:
         A dictionary containing a list of workflow templates.
     """
     try:
-        
         workflow_template_client = get_workflow_template_client(region)
 
-        
         parent = f"projects/{project_id}/regions/{region}"
         templates = workflow_template_client.list_workflow_templates(parent=parent)
 
-        
         template_list = []
         for template in templates:
-            template_list.append({
-                "name": template.name,
-                "id": template.id,
-                "create_time": template.create_time
-            })
+            template_list.append(
+                {
+                    "name": template.name,
+                    "id": template.id,
+                    "create_time": template.create_time,
+                }
+            )
 
-        return {
-            "status": "success",
-            "templates": template_list
-        }
+        return {"status": "success", "templates": template_list}
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while listing workflow templates in %s: %s",
+            region,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to list workflow templates: {e.message}"
+            "error_message": f"Failed to list workflow templates: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while listing workflow templates in %s: %s",
+            region,
+            str(e),
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred: {str(e)}"
+            "error_message": f"An unexpected error occurred: {str(e)}",
         }

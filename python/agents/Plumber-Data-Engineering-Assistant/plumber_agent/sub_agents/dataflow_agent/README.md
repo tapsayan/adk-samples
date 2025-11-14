@@ -12,13 +12,12 @@ AI-powered agent for managing and orchestrating Google Cloud Dataflow jobs using
 | [`create_pipeline_from_scratch`](tools/pipeline_utils.py) | Create a new Dataflow pipeline from scratch. |
 | [`get_dataflow_template`](tools/dataflow_template_tools.py) | Retrieve a pre-defined Dataflow template. |
 | [`submit_dataflow_template`](tools/dataflow_template_tools.py) | Submit a job using a Dataflow template. |
-| [`customize_and_build_template`](tools/dataflow_template_tools.py) | Customize and build a new Dataflow template. |
 
 ## Key Features
 
 - 🚀 Manage and orchestrate Dataflow jobs
 - 📄 Work with Dataflow templates
-- 🔧 Customize and build new templates
+- ✨ Create a new Dataflow pipeline from scratch with transformations
 - 🤖 AI-powered with Google ADK
 
 ## Security

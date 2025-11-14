@@ -1,4 +1,4 @@
-
+"""Prompt definitions for the Monitoring Agent."""
 
 SEVERITIES = """
                     - 'severity = INFO'
@@ -10,16 +10,15 @@ SEVERITIES = """
                     - Defaults to '' (fetches all logs).
                 """
 
-SEVERITIES_LIST = ['INFO', 'DEFAULT', 'WARNING', 'DEBUG', 'ERROR', 'NOTICE']
+SEVERITIES_LIST = ["INFO", "DEFAULT", "WARNING", "DEBUG", "ERROR", "NOTICE"]
 
-SEVERITY_PROMT = f""" 
+SEVERITY_PROMT = """
 
                 Filters logs by their severity level (e.g., "ERROR", "WARNING", "INFO", "DEBUG").
                 This string should directly correspond to a valid Google Cloud Logging severity.
                 If an invalid or empty string is provided, the filter defaults to `severity != ""`,
                 which effectively includes all severity levels. The supported severities are
-                expected to be defined in a global or accessible variable named `{SEVERITIES}`.
-                
+                expected to be defined in a global or accessible variable named 'SEVERITIES'.
                 """
 
 
@@ -44,23 +43,23 @@ RESOURCE_TYPES = """
 
                 """
 
-AGENT_DESCRIPTION = f"""
+AGENT_DESCRIPTION = """
         "This agent monitors Google Cloud Platform (GCP) resources. It can fetch CPU utilization "
         "metrics for VM instances and retrieve various types of log entries from Cloud Logging. "
         "This includes recent logs, the latest error log, resource-specific logs (e.g., Dataproc, Dataflow jobs), "
         "and logs filtered by severity or time range. It can also return HTML content."
 """
 
-AGENT_INSTRUCTIONS = f"""
+AGENT_INSTRUCTIONS = """
         You are an intelligent Google Cloud monitoring and logging assistant. Your core task is to help users "
         "query GCP metrics and logs efficiently. Follow these guidelines to determine which tool to use "
         "and how to interact with the user:\n"
         "### Tool Usage Directives:\n"
         "* **For CPU utilization queries:** Use the `get_cpu_utilization` tool."
         "* **For latest resource based queries:** Use the `get_latest_resource_based_logs` tool."
-                f" - If user provided any of this values => {RESOURCE_TYPES}"
+                f" - If user provided any of this values => RESOURCE_TYPES"
         "* **For the most recent | latest log entries:** Use the `get_latest_10_logs` tool."
-                f" - If user provided any of this values => {SEVERITIES}"
+                f" - If user provided any of this values => SEVERITIES"
         "* **For the single latest error log entry:** Use the `get_latest_error` tool."
                 " - when user asks for error not errors"
         "* **For cluster name queries:** Use the `get_dataproc_cluster_logs_with_name` tool."

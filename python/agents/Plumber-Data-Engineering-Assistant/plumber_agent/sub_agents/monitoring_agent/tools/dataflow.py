@@ -1,14 +1,19 @@
-from datetime import datetime, timedelta
-from google.cloud import logging_v2
+"""
+This module provides tools for interacting with Google Cloud Dataflow.
+"""
 
 import logging
+from datetime import datetime, timedelta
+
+from google.cloud import logging_v2
+from google.api_core import exceptions as google_exceptions
+from .utils import _process_log_iterator
 
 logger = logging.getLogger("plumber-agent")
 
 
-def get_dataflow_job_logs_with_id(project_id: str, job_id: str, _limit: int = 10) -> dict:
-
-    """ 
+def get_dataflow_job_logs_with_id(project_id: str, job_id: str, _limit: int = 10) -> dict[str, str]:
+    """
     Fetches log entries for a specific Dataflow job using its ID from Google Cloud Logging.
 
     This function retrieves log entries from Google Cloud Logging that are associated
@@ -18,8 +23,9 @@ def get_dataflow_job_logs_with_id(project_id: str, job_id: str, _limit: int = 10
 
     Args:
         project_id (str, required): The Google Cloud project ID. from which logs are to be fetched.
-        job_id (str, required): The unique identifier of the Dataflow job for which logs are to be fetched.
-            This argument is required to filter the logs specifically for a given job.
+        job_id (str, required): The unique identifier of the Dataflow job
+            for which the logs are to be fetched. This argument is required
+            to filter the logs specifically for a given job.
         _limit (int, optional): The maximum number of log entries to fetch. The function
             will retrieve up to this many entries, Defaults to 10.
 
@@ -35,42 +41,47 @@ def get_dataflow_job_logs_with_id(project_id: str, job_id: str, _limit: int = 10
                 details about the error that occurred.
 
     Note: [IMPORTANT]
-        - Don't call this tool till u have job_id 
+        - Don't call this tool until you have job_id
             - example job_id : 2025-07-11_02_51_43-12657112666808971216
-     """
+    """
 
-    print("datetime.now() - timedelta(days=90)", (datetime.now() - timedelta(days=90)).isoformat())
+    logger.info(
+        "datetime.now() - timedelta(days=90): %s",
+        (datetime.now() - timedelta(days=90)).isoformat(),
+    )
 
-    collected_logs = []
     filter_string = (
         f'resource.type="dataflow_step" AND '
-        f'resource.labels.job_id="{job_id}" AND ' 
-        f'timestamp >= "{(datetime.now() - timedelta(days=90)).isoformat()}Z"' # there is some lookback time for filter you not able to fetch logs before that to get those you have to use timestamp
+        f'resource.labels.job_id="{job_id}" AND '
+        f'timestamp >= "{(datetime.now() - timedelta(days=90)).isoformat()}Z"'
     )
 
     try:
         client = logging_v2.Client(project=project_id)
         project_path = f"projects/{project_id}"
         iterator = client.list_entries(
-            resource_names=[project_path],
-            filter_=filter_string,
-            max_results=_limit 
+            resource_names=[project_path], filter_=filter_string, max_results=_limit
         )
 
-        print("iterator =====> ", iterator)
+        collected_logs = _process_log_iterator(iterator, _limit)
 
-        log_count = 0
-        for entry in iterator:
-            log_count += 1
-            print(f"Entry - {log_count} \n", entry)
-            collected_logs.append(f"Entry {log_count}: {str(entry)}")
-            
+        return {
+            "status": "success",
+            "report": (f"Fetched log entries of Job ID: {job_id}:\n" + "\n".join(collected_logs)),
+        }
 
-        return {"status": "success", "report": f"Fetched log entries of Job ID: {job_id}:\n" + "\n".join(collected_logs)}
-
-    except StopIteration:
+    except StopIteration as err:
+        logger.error("An error occurred: %s", err, exc_info=True)
         return {"status": "success", "report": "No job log entry found with given ID."}
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        logger.error(f"An error occurred: {e}")
-        return {"status": "error", "message": f"Failed to get job with given id and error: {e}"}
+    except google_exceptions.GoogleAPIError as err:
+        logger.error("A Google Cloud API error occurred: %s", err, exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Failed to get job with given id due to API error: {err}",
+        }
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logger.error("An unexpected error occurred: %s", err, exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Failed to get job with given id due to unexpected error: {err}",
+        }

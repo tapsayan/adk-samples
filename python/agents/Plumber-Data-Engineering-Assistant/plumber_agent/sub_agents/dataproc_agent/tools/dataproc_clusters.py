@@ -1,9 +1,20 @@
-from typing import List, Optional
+"""Module for managing Dataproc clusters."""
 
-from google.cloud import dataproc_v1 as dataproc
-from google.cloud.dataproc_v1.types import Cluster, ClusterConfig, GceClusterConfig, InstanceGroupConfig, DiskConfig
+from typing import Optional, Any
+import logging
+
+from google.cloud import dataproc
+from google.cloud.dataproc_v1.types import (
+    Cluster,
+    ClusterConfig,
+    GceClusterConfig,
+    InstanceGroupConfig,
+    DiskConfig,
+)
 from google.api_core.exceptions import GoogleAPICallError, NotFound
 from google.cloud.dataproc_v1 import ClusterControllerClient
+
+logger = logging.getLogger("plumber-agent")
 
 
 def get_cluster_client(region: str) -> ClusterControllerClient:
@@ -19,19 +30,14 @@ def get_cluster_client(region: str) -> ClusterControllerClient:
     return ClusterControllerClient(
         client_options={"api_endpoint": f"{region}-dataproc.googleapis.com:443"}
     )
-def create_cluster(project_id: str,
-                   region: str, 
-                   cluster_name: str, 
-                   num_instances_master: int, 
-                   num_instances_worker: int, 
-                   machine_type_master: str, 
-                   machine_type_worker: str,
-                   boot_disk_size_master: int,
-                   boot_disk_size_worker: int,
-                   pip_packages_to_install: Optional[List[str]] = None,
-                   jar_files_gcs_path: Optional[str] = None, 
-                   initialization_action_script_path: Optional[str] = None
-                   ) -> dict:
+
+
+def create_cluster(
+    project_id: str,
+    region: str,
+    cluster_name: str,
+    cluster_config: dict,
+) -> dict[str, Any]:
     """
     Creates a Dataproc cluster.
 
@@ -39,15 +45,7 @@ def create_cluster(project_id: str,
         project_id: The GCP project ID.
         region: The GCP region for the cluster.
         cluster_name: The name of the cluster.
-        num_instances_master: The number of master instances.
-        num_instances_worker: The number of worker instances.
-        machine_type_master: The machine type for the master node.
-        machine_type_worker: The machine type for the worker nodes.
-        boot_disk_size_master: The boot disk size for the master node in GB.
-        boot_disk_size_worker: The boot disk size for the worker nodes in GB.
-        pip_packages_to_install: A list of pip packages to install.
-        jar_files_gcs_path: The GCS path to JAR files.
-        initialization_action_script_path: The GCS path to an initialization script.
+        cluster_config: A dictionary containing the cluster configuration.
 
     Returns:
         A dictionary with the status of the cluster creation.
@@ -55,59 +53,54 @@ def create_cluster(project_id: str,
     try:
         # Create a client with the endpoint set to the desired cluster region.
         cluster_client = get_cluster_client(region)
-        
-        
 
         # Define the configuration for the master node
         master_config = InstanceGroupConfig(
-            num_instances=num_instances_master,
-            machine_type_uri=machine_type_master,
-            disk_config=DiskConfig(
-                boot_disk_size_gb= boot_disk_size_master
-            )
+            num_instances=cluster_config.get("num_instances_master"),
+            machine_type_uri=cluster_config.get("machine_type_master"),
+            disk_config=DiskConfig(boot_disk_size_gb=cluster_config.get("boot_disk_size_master")),
         )
 
         # Define the configuration for the worker nodes
         worker_config = InstanceGroupConfig(
-            num_instances=num_instances_worker,
-            machine_type_uri= machine_type_worker,
-            disk_config=DiskConfig(
-                boot_disk_size_gb= boot_disk_size_worker
-            )
+            num_instances=cluster_config.get("num_instances_worker"),
+            machine_type_uri=cluster_config.get("machine_type_worker"),
+            disk_config=DiskConfig(boot_disk_size_gb=cluster_config.get("boot_disk_size_worker")),
         )
 
         # Define the GCE (Compute Engine) configuration for the cluster
         gce_cluster_config = GceClusterConfig(
-            service_account_scopes=["https://www.googleapis.com/auth/cloud-platform"], 
+            service_account_scopes=["https://www.googleapis.com/auth/cloud-platform"],
         )
-        
-        
+
         # Define software configuration, including pip packages
         software_properties = {}
-        if pip_packages_to_install:
-            software_properties["dataproc:pip.packages"] = ",".join(pip_packages_to_install)
+        if cluster_config.get("pip_packages_to_install"):
+            software_properties["dataproc:pip.packages"] = ",".join(
+                cluster_config.get("pip_packages_to_install")
+            )
 
         software_config = dataproc.SoftwareConfig(
-            image_version="2.1-debian11",
-            properties=software_properties
+            image_version="2.1-debian11", properties=software_properties
         )
-        
+
         # If a JAR GCS path is provided, add it to the initialization actions
         initialization_actions = []
-        if initialization_action_script_path:
-            init_action = dataproc.cluster.InitializationAction(
-                executable_file=initialization_action_script_path
+        if cluster_config.get("initialization_action_script_path"):
+            init_action = Cluster.InitializationAction(
+                executable_file=cluster_config.get("initialization_action_script_path")
             )
             initialization_actions.append(init_action)
 
-            # Pass JAR GCS path as metadata to the initialization script if provided
-            if jar_files_gcs_path:
+            # Pass JAR GCS path as metadata to the initialization script
+            if cluster_config.get("jar_files_gcs_path"):
                 if not gce_cluster_config.metadata:
                     gce_cluster_config.metadata = {}
-                gce_cluster_config.metadata["JAR_GCS_PATH"] = jar_files_gcs_path
+                gce_cluster_config.metadata["JAR_GCS_PATH"] = cluster_config.get(
+                    "jar_files_gcs_path"
+                )
 
-
-    # Construct the full cluster configuration using the imported types
+        # Construct the full cluster configuration using the imported types
         cluster = Cluster(
             project_id=project_id,
             cluster_name=cluster_name,
@@ -117,40 +110,54 @@ def create_cluster(project_id: str,
                 master_config=master_config,
                 worker_config=worker_config,
                 software_config=software_config,
-                initialization_actions=initialization_actions if initialization_actions else None
+                initialization_actions=(initialization_actions if initialization_actions else None),
             ),
         )
 
         # Create the cluster.
-        operation = cluster_client.create_cluster(
-            request={"project_id": project_id, "region": region, "cluster": cluster}
+        cluster_client.create_cluster(
+            request={
+                "project_id": project_id,
+                "region": region,
+                "cluster": cluster,
+            }
         )
-        # result = operation.result() 
 
         # Output a success message.
-        return{
+        return {
             "status": "success",
             "report": (
-                    f"Dataproc cluster '{cluster_name}' created successfully in region '{region}' "
-                    f"It might take a few more minutes for all services to be fully ready."
-                )
-    }
+                f"Dataproc cluster '{cluster_name}' created successfully in "
+                f"region '{region}' It might take a few more minutes for all "
+                "services to be fully ready."
+            ),
+        }
 
-    except GoogleAPICallError as e:
-        
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error during cluster creation of '%s': %s",
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to create Dataproc cluster: {e.message}"
+            "error_message": f"Failed to create Dataproc cluster: {apierror.message}",
         }
-    except Exception as e:
-     
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred during cluster creation of '%s': %s",
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred during cluster creation: {str(e)}"
+            "error_message": (f"An unexpected error occurred during cluster creation: {str(e)}"),
         }
-     
-        
-def cluster_exists_or_not(project_id: str, region: str, cluster_name: str) -> dict:
+
+
+def cluster_exists_or_not(project_id: str, region: str, cluster_name: str) -> dict[str, Any]:
     """
     Checks if a Dataproc cluster exists.
 
@@ -167,37 +174,50 @@ def cluster_exists_or_not(project_id: str, region: str, cluster_name: str) -> di
         cluster_client = get_cluster_client(region)
 
         # Attempt to fetch the cluster details
-        cluster_client.get_cluster(
-            project_id=project_id, region=region, cluster_name=cluster_name
-        )
+        cluster_client.get_cluster(project_id=project_id, region=region, cluster_name=cluster_name)
 
         # If no exception is raised, the cluster exists
         return {
             "status": "success",
             "exists": True,
-            "message": f"Cluster '{cluster_name}' exists in region '{region}'."
+            "message": f"Cluster '{cluster_name}' exists in region '{region}'.",
         }
 
     except NotFound:
         return {
             "status": "success",
             "exists": False,
-            "message": f"Cluster '{cluster_name}' does not exist in region '{region}'."
+            "message": (f"Cluster '{cluster_name}' does not exist in region '{region}'."),
         }
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while checking cluster existence for '%s': %s",
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to check cluster existence: {e.message}"
+            "error_message": f"Failed to check cluster existence: {apierror.message}",
         }
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while checking cluster existence for '%s': %s",
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred while checking cluster existence: {str(e)}"
+            "error_message": (
+                f"An unexpected error occurred while checking cluster existence: {str(e)}"
+            ),
         }
 
-def list_clusters(project_id: str, region: str) -> dict:
+
+def list_clusters(project_id: str, region: str) -> dict[str, Any]:
     """
     Lists all Dataproc clusters in a region.
 
@@ -209,39 +229,50 @@ def list_clusters(project_id: str, region: str) -> dict:
         A dictionary containing a list of clusters.
     """
     try:
-       
         cluster_client = get_cluster_client(region)
 
-        
         clusters = cluster_client.list_clusters(project_id=project_id, region=region)
 
         # Prepare the response
         cluster_list = []
         for cluster in clusters:
-            cluster_list.append({
-                "name": cluster.cluster_name,
-                "status": cluster.status.state.name,
-                "create_time": cluster.status.detail,
-            })
+            cluster_list.append(
+                {
+                    "name": cluster.cluster_name,
+                    "status": cluster.status.state.name,
+                    "create_time": cluster.status.detail,
+                }
+            )
 
-        return {
-            "status": "success",
-            "clusters": cluster_list
-        }
-        
+        return {"status": "success", "clusters": cluster_list}
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while listing clusters in %s: %s",
+            region,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to list Dataproc clusters: {e.message}"
+            "error_message": f"Failed to list Dataproc clusters: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while listing clusters in %s: %s",
+            region,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred while listing clusters: {str(e)}"
-        } 
-        
-def start_stop_cluster(project_id: str, region: str, cluster_name: str, action: str) -> dict:
+            "error_message": (f"An unexpected error occurred while listing clusters: {str(e)}"),
+        }
+
+
+def start_stop_cluster(
+    project_id: str, region: str, cluster_name: str, action: str
+) -> dict[str, Any]:
     """
     Starts or stops a Dataproc cluster.
 
@@ -255,12 +286,8 @@ def start_stop_cluster(project_id: str, region: str, cluster_name: str, action: 
         A dictionary with the status of the action.
     """
     try:
-        
-        
         # Create a client for the ClusterController API
         cluster_client = get_cluster_client(region)
-        
-        
 
         if action.lower() == "start":
             # Start the cluster
@@ -271,15 +298,14 @@ def start_stop_cluster(project_id: str, region: str, cluster_name: str, action: 
                     "cluster_name": cluster_name,
                 }
             )
-            operation.result() 
+            operation.result()
             return {
                 "status": "success",
-                "report": f"Cluster '{cluster_name}' started successfully in region '{region}'."
+                "report": (f"Cluster '{cluster_name}' started successfully in region '{region}'."),
             }
 
-        elif action.lower() == "stop":
+        if action.lower() == "stop":
             # Stop the cluster
-        
             operation = cluster_client.stop_cluster(
                 request={
                     "project_id": project_id,
@@ -287,33 +313,49 @@ def start_stop_cluster(project_id: str, region: str, cluster_name: str, action: 
                     "cluster_name": cluster_name,
                 }
             )
-            operation.result() 
-    
+            operation.result()
             return {
                 "status": "success",
-                "report": f"Cluster '{cluster_name}' stopped successfully in region '{region}'."
+                "report": (f"Cluster '{cluster_name}' stopped successfully in region '{region}'."),
             }
 
-        else:
-            raise ValueError("Invalid action. Use 'start' or 'stop'.")
+        raise Exception("Invalid action. Use 'start' or 'stop'.")  # pylint: disable=broad-exception-raised
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while trying to '%s' cluster '%s': %s",
+            action,
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to {action} cluster: {e.message}"
+            "error_message": f"Failed to {action} cluster: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while trying to '%s' cluster '%s': %s",
+            action,
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred while trying to {action} the cluster: {str(e)}"
-        }   
-        
+            "error_message": (
+                f"An unexpected error occurred while trying to {action} the cluster: {str(e)}"
+            ),
+        }
+
+
 def update_cluster(
     project_id: str,
     region: str,
     cluster_name: str,
+    # num_workers: int | None = None
     num_workers: Optional[int] = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Updates a Dataproc cluster.
 
@@ -327,11 +369,13 @@ def update_cluster(
         A dictionary with the status of the update and cluster details.
     """
     try:
-        
-        if( num_workers is None):
+        if num_workers is None:
             return {
                 "status": "Success",
-                "report": f"No changes made to cluster '{cluster_name}' in region '{region}', as no worker configuration was provided."
+                "report": (
+                    f"No changes made to cluster '{cluster_name}' in region "
+                    f"'{region}', as no worker configuration was provided."
+                ),
             }
         # Create a client for the ClusterController API
         cluster_client = get_cluster_client(region)
@@ -340,21 +384,23 @@ def update_cluster(
         cluster = cluster_client.get_cluster(
             project_id=project_id, region=region, cluster_name=cluster_name
         )
-        
-        
+
         current_num_workers = cluster.config.worker_config.num_instances
         if num_workers == current_num_workers:
-                return {
-                    "status": "Success",  
-                    "report": f"No changes made to cluster '{cluster_name}' in region '{region}', as the number of workers is already set to {num_workers}."  
-                }
-        
+            return {
+                "status": "Success",
+                "report": (
+                    f"No changes made to cluster '{cluster_name}' in region "
+                    f"'{region}', as the number of workers is already set to "
+                    f"{num_workers}."
+                ),
+            }
+
         # Update worker configurations if specified
         update_mask_paths = []
         if num_workers is not None:
             cluster.config.worker_config.num_instances = num_workers
             update_mask_paths.append("config.worker_config.num_instances")
-
 
         # Submit the update request
         operation = cluster_client.update_cluster(
@@ -376,32 +422,48 @@ def update_cluster(
             "status": updated_cluster.status.state.name,
             "config": {
                 "worker_config": {
-                    "num_instances": updated_cluster.config.worker_config.num_instances,
-                    "machine_type_uri": updated_cluster.config.worker_config.machine_type_uri,
+                    "num_instances": (updated_cluster.config.worker_config.num_instances),
+                    "machine_type_uri": (updated_cluster.config.worker_config.machine_type_uri),
                     "disk_config": {
-                        "boot_disk_size_gb": updated_cluster.config.worker_config.disk_config.boot_disk_size_gb
-                    }
+                        "boot_disk_size_gb": (
+                            updated_cluster.config.worker_config.disk_config.boot_disk_size_gb
+                        )
+                    },
                 }
-            }
+            },
         }
 
         return {
             "status": "success",
-            "report": f"Cluster '{cluster_name}' updated successfully in region '{region}'.",
-            "details": cluster_details
+            "report": (f"Cluster '{cluster_name}' updated successfully in region '{region}'."),
+            "details": cluster_details,
         }
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while updating cluster '%s': %s",
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to update cluster: {e.message}"
+            "error_message": f"Failed to update cluster: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred during cluster update for '%s': %s",
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred during cluster update: {str(e)}"
+            "error_message": (f"An unexpected error occurred during cluster update: {str(e)}"),
         }
-def get_cluster_details(project_id: str, region: str, cluster_name: str) -> dict:
+
+
+def get_cluster_details(project_id: str, region: str, cluster_name: str) -> dict[str, Any]:
     """
     Gets the details of a Dataproc cluster.
 
@@ -414,8 +476,6 @@ def get_cluster_details(project_id: str, region: str, cluster_name: str) -> dict
         A dictionary with the cluster details.
     """
     try:
-        
-       
         # Create a client for the ClusterController API
         cluster_client = get_cluster_client(region)
 
@@ -433,39 +493,54 @@ def get_cluster_details(project_id: str, region: str, cluster_name: str) -> dict
             "labels": dict(cluster.labels),
             "config": {
                 "master_config": {
-                    "machine_type_uri": cluster.config.master_config.machine_type_uri,
+                    "machine_type_uri": (cluster.config.master_config.machine_type_uri),
                     "disk_config": {
-                        "boot_disk_size_gb": cluster.config.master_config.disk_config.boot_disk_size_gb
-                    }
+                        "boot_disk_size_gb": (
+                            cluster.config.master_config.disk_config.boot_disk_size_gb
+                        )
+                    },
                 },
                 "worker_config": {
-                    "num_instances": cluster.config.worker_config.num_instances,
-                    "machine_type_uri": cluster.config.worker_config.machine_type_uri,
+                    "num_instances": (cluster.config.worker_config.num_instances),
+                    "machine_type_uri": (cluster.config.worker_config.machine_type_uri),
                     "disk_config": {
-                        "boot_disk_size_gb": cluster.config.worker_config.disk_config.boot_disk_size_gb
-                    }
-                }
-            }
+                        "boot_disk_size_gb": (
+                            cluster.config.worker_config.disk_config.boot_disk_size_gb
+                        )
+                    },
+                },
+            },
         }
 
-        return {
-            "status": "success",
-            "details": cluster_details
-        }
+        return {"status": "success", "details": cluster_details}
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while fetching details for cluster '%s': %s",
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to fetch cluster details: {e.message}"
+            "error_message": f"Failed to fetch cluster details: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while fetching details for cluster '%s': %s",
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred while fetching cluster details: {str(e)}"
+            "error_message": (
+                f"An unexpected error occurred while fetching cluster details: {str(e)}"
+            ),
         }
 
 
-def delete_cluster(project_id: str, region: str, cluster_name: str) -> dict:
+def delete_cluster(project_id: str, region: str, cluster_name: str) -> dict[str, Any]:
     """
     Deletes a Dataproc cluster.
 
@@ -478,7 +553,6 @@ def delete_cluster(project_id: str, region: str, cluster_name: str) -> dict:
         A dictionary with the status of the deletion.
     """
     try:
-     
         # Create a client for the ClusterController API
         cluster_client = get_cluster_client(region)
 
@@ -490,20 +564,32 @@ def delete_cluster(project_id: str, region: str, cluster_name: str) -> dict:
                 "cluster_name": cluster_name,
             }
         )
-        operation.result() 
+        operation.result()
 
         return {
             "status": "success",
-            "report": f"Cluster '{cluster_name}' deleted successfully in region '{region}'."
+            "report": (f"Cluster '{cluster_name}' deleted successfully in region '{region}'."),
         }
 
-    except GoogleAPICallError as e:
+    except GoogleAPICallError as apierror:
+        logger.error(
+            "Google API Call Error while deleting cluster '%s': %s",
+            cluster_name,
+            apierror.message,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"Failed to delete cluster: {e.message}"
+            "error_message": f"Failed to delete cluster: {apierror.message}",
         }
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(
+            "An unexpected error occurred while deleting cluster '%s': %s",
+            cluster_name,
+            e,
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "error_message": f"An unexpected error occurred while deleting the cluster: {str(e)}"
+            "error_message": (f"An unexpected error occurred while deleting the cluster: {str(e)}"),
         }
