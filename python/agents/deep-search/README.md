@@ -49,7 +49,7 @@ Clone the repository and `cd` into the project directory.
 
 ```bash
 git clone https://github.com/google/adk-samples.git
-cd adk-samples/python/agents/gemini-fullstack
+cd adk-samples/python/agents/deep-search
 ```
 
 #### Step 2: Set Environment Variables
@@ -61,7 +61,7 @@ echo "GOOGLE_API_KEY=YOUR_AI_STUDIO_API_KEY" >> app/.env
 ```
 
 #### Step 3: Install & Run
-From the `gemini-fullstack` directory, install dependencies and start the servers.
+From the `deep-search` directory, install dependencies and start the servers.
 
 ```bash
 make install && make dev
@@ -82,14 +82,14 @@ python -m venv .venv && source .venv/bin/activate # On Windows: .venv\Scripts\ac
 
 # Install the starter pack and create your project
 pip install --upgrade agent-starter-pack
-agent-starter-pack create my-fullstack-agent -a adk@gemini-fullstack
+agent-starter-pack create my-fullstack-agent -a adk@deep-search
 ```
 <details>
 <summary>⚡️ Alternative: Using uv</summary>
 
 If you have [`uv`](https://github.com/astral-sh/uv) installed, you can create and set up your project with a single command:
 ```bash
-uvx agent-starter-pack create my-fullstack-agent -a adk@gemini-fullstack
+uvx agent-starter-pack create my-fullstack-agent -a adk@deep-search
 ```
 This command handles creating the project without needing to pre-install the package into a virtual environment.
 </details>
