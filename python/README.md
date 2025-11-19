@@ -81,7 +81,6 @@ other models for these samples.
 │   └── README.md               # This file (Repository overview)
 ```
 
-
 ## ℹ️ Getting help
 
 If you have any questions or if you found any problems with this repository,
