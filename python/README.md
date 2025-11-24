@@ -81,6 +81,29 @@ other models for these samples.
 │   └── README.md               # This file (Repository overview)
 ```
 
+## Local Contributor Pre-Check
+
+Before submitting a Pull Request with changes to Python files, please run the following script locally to quickly validate your changes against our standards.
+
+1.  Ensure you have **Python** installed and the script is executable (`chmod +x python-checks.sh`).
+2.  Run the script from the repository root using a **run flag**, specifying the **relative path** to the agent or notebook folder you modified.
+
+| Purpose | Command |
+| :--- | :--- |
+| **Run all checks** (Black, iSort, Flake8) | `./python-checks.sh --run-all agents/agent_directory_name` |
+| **Run only `flake8`** (Linting) | `./python-checks.sh --run-lint agents/agent_directory_name` |
+| **Run only `black`** (Formatting) | `./python-checks.sh --run-black notebooks/notebook_directory_name` |
+| **Run only `isort`** (Import Sorting) | `./python-checks.sh --run-isort notebooks/notebook_directory_name` |
+| **Get detailed usage and options** | `./python-checks.sh --help` |
+
+> **Note:** The script requires the full relative path starting with `agents/` or `notebooks/` (e.g., `agents/academic-research`). This ensures checks are scoped strictly to the component you are working on.
+
+## 📝 Code Quality Checks
+
+We use automated checks to ensure high quality and consistency across all code samples.
+
+This script will run `black`, `isort` and `flake8` to check for formatting and linting errors.
+
 ## ℹ️ Getting help
 
 If you have any questions or if you found any problems with this repository,
