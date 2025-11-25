@@ -75,7 +75,7 @@ Output *only* the complete, updated story text (Previous Text + New Chapter).
 Do not add commentary or meta-text.
 """
 
-EDITOR_AGENT_INSTRUCTION = """You are a Master Editor.
+EDITOR_AGENT_INSTRUCTION = """You are a Fantastic Editor.
 You have the completed draft of a short story. Your job is to polish it.
 Fix flow issues, typos, and inconsistencies. Improve the ending if necessary. But do not make big changes.
 
