@@ -41,9 +41,6 @@ def set_initial_story(callback_context, llm_request):
     callback_context.state[KEY_CURRENT_STORY] = "Chapter 1"
     return None
 
-
-# --- 1. Agent Definitions ---
-
 # --- 1. Agent Definitions ---
 
 # Expands the user's simple idea into a full premise.
@@ -96,7 +93,6 @@ editor_agent = LlmAgent(
     description="Polishes the final draft.",
     output_key=KEY_FINAL_STORY,
 )
-
 
 # --- 2. Workflow Structure ---
 
