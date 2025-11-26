@@ -11,3 +11,6 @@ dependencies = [
     "google-genai>=1.17.0",
     "python-dotenv>=1.1.0",
 ]
+
+[tool.agent-starter-pack.settings]
+deployment_targets = ["agent_engine", "cloud_run"]
