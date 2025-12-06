@@ -48,7 +48,7 @@ An AI pipeline that unifies these disparate data sources into a coherent strateg
 - **Extended Reasoning**: StrategyAdvisorAgent uses thinking mode for deep strategic synthesis
 - **Structured Output**: Pydantic schemas ensure consistent, parseable JSON output
 - **Professional Reports**: McKinsey/BCG style 7-slide HTML executive presentations
-- **Visual Infographics**: Native image generation using Gemini 3 Nano Banana Pro
+- **Visual Infographics**: Native image generation using Gemini 3 Pro Image Preview
 - **Retry Logic**: Built-in retry with exponential backoff for API rate limits
 - **Lifecycle Callbacks**: Before/after hooks for logging, state tracking, and artifact management
 
@@ -134,42 +134,50 @@ Variables in curly braces (e.g., `{target_location}`) are automatically injected
 ## Project Structure
 
 ```
-retail_ai_location_strategy_adk/
-├── __init__.py              # Package exports
-├── agent.py                 # Root SequentialAgent definition
-├── config.py                # Model and retry configuration
-├── requirements.txt         # Python dependencies
+retail-ai-location-strategy/
+├── Makefile                 # Build and run commands
+├── pyproject.toml           # Dependencies and package config
+├── uv.lock                  # Lockfile for reproducible builds
 ├── .env.example             # Environment template
 ├── README.md                # Quick start guide
 ├── DEVELOPER_GUIDE.md       # This file
 │
-├── sub_agents/              # 7 specialized agents
-│   ├── __init__.py
-│   ├── intake_agent.py      # Parses user request
-│   ├── market_research.py   # Web search for market data
-│   ├── competitor_mapping.py # Maps API for competitors
-│   ├── gap_analysis.py      # Python code execution
-│   ├── strategy_advisor.py  # Extended reasoning + structured output
-│   ├── report_generator.py  # HTML report generation
-│   └── infographic_generator.py # Image generation
-│
-├── tools/                   # Custom function tools
-│   ├── __init__.py
-│   ├── places_search.py     # Google Maps Places API wrapper
-│   ├── html_report_generator.py # HTML generation tool
-│   └── image_generator.py   # Gemini image generation tool
-│
-├── callbacks/               # Pipeline lifecycle callbacks
-│   ├── __init__.py
-│   └── pipeline_callbacks.py # Before/after hooks for all agents
-│
-├── schemas/                 # Pydantic output schemas
-│   ├── __init__.py
-│   └── report_schema.py     # LocationIntelligenceReport and related models
+├── app/                     # Agent package
+│   ├── __init__.py          # Exports root_agent for ADK discovery
+│   ├── agent.py             # Root SequentialAgent definition
+│   ├── config.py            # Model and retry configuration
+│   ├── .env                 # Environment variables (from .env.example)
+│   │
+│   ├── sub_agents/          # 7 specialized agents
+│   │   ├── __init__.py
+│   │   ├── intake_agent.py      # Parses user request
+│   │   ├── market_research.py   # Web search for market data
+│   │   ├── competitor_mapping.py # Maps API for competitors
+│   │   ├── gap_analysis.py      # Python code execution
+│   │   ├── strategy_advisor.py  # Extended reasoning + structured output
+│   │   ├── report_generator.py  # HTML report generation
+│   │   └── infographic_generator.py # Image generation
+│   │
+│   ├── tools/               # Custom function tools
+│   │   ├── __init__.py
+│   │   ├── places_search.py     # Google Maps Places API wrapper
+│   │   ├── html_report_generator.py # HTML generation tool
+│   │   └── image_generator.py   # Gemini image generation tool
+│   │
+│   ├── callbacks/           # Pipeline lifecycle callbacks
+│   │   ├── __init__.py
+│   │   └── pipeline_callbacks.py # Before/after hooks for all agents
+│   │
+│   ├── schemas/             # Pydantic output schemas
+│   │   ├── __init__.py
+│   │   └── report_schema.py     # LocationIntelligenceReport and related models
+│   │
+│   └── frontend/            # AG-UI interactive dashboard (optional)
+│       ├── backend/         # FastAPI + ADKAgent wrapper
+│       └── ...              # Next.js app
 │
 └── notebook/                # Original API-based implementation
-    ├── retail_ai_location_strategy_gemini_3.ipynb
-    └── retail_ai_location_strategy_gemini_3.py
+    └── retail_ai_location_strategy_gemini_3.ipynb
 ```
 
 ---
@@ -220,7 +228,7 @@ async def generate_html_report(report_data: str, tool_context: ToolContext) -> d
 
 #### generate_infographic
 
-Creates visual infographics using Gemini 3 Nano Banana Pro (`gemini-3-pro-image-preview`).
+Creates visual infographics using Gemini 3 Pro Image Preview (`gemini-3-pro-image-preview`).
 
 ```python
 async def generate_infographic(data_summary: str, tool_context: ToolContext) -> dict:
@@ -295,18 +303,20 @@ Edit `config.py` to switch between model options:
 
 ```python
 # config.py - Switch models by commenting/uncommenting
+# NOTE: Gemini 2.5 Pro is RECOMMENDED for stability. Gemini 3 Pro Preview
+#       may throw "model overloaded" (503) errors during high-demand periods.
 
-# Option 1: Gemini 3 Pro Preview (default - latest capabilities)
-FAST_MODEL = "gemini-3-pro-preview"
-PRO_MODEL = "gemini-3-pro-preview"
-CODE_EXEC_MODEL = "gemini-2.5-pro"  # Code execution requires 2.5+
-IMAGE_MODEL = "gemini-3-pro-image-preview"  # Nano Banana Pro
+# Option 1: Gemini 2.5 Pro (RECOMMENDED - stable, good for production)
+FAST_MODEL = "gemini-2.5-pro"
+PRO_MODEL = "gemini-2.5-pro"
+CODE_EXEC_MODEL = "gemini-2.5-pro"
+IMAGE_MODEL = "gemini-3-pro-image-preview"  # Gemini 3 for native image generation
 
-# Option 2: Gemini 2.5 Pro (stable, good for production)
-# FAST_MODEL = "gemini-2.5-pro"
-# PRO_MODEL = "gemini-2.5-pro"
-# CODE_EXEC_MODEL = "gemini-2.5-pro"
-# IMAGE_MODEL = "gemini-2.0-flash-exp"
+# Option 2: Gemini 3 Pro Preview (latest features, may have availability issues)
+# FAST_MODEL = "gemini-3-pro-preview"
+# PRO_MODEL = "gemini-3-pro-preview"
+# CODE_EXEC_MODEL = "gemini-3-pro-preview"
+# IMAGE_MODEL = "gemini-3-pro-image-preview"
 
 # Option 3: Gemini 2.5 Flash (fastest, lowest cost)
 # FAST_MODEL = "gemini-2.5-flash"
@@ -336,7 +346,7 @@ Structured JSON output from StrategyAdvisorAgent containing all analysis data.
 Professional 7-slide HTML presentation suitable for executive presentations.
 
 ### 3. infographic.png
-Visual summary infographic generated by Gemini 3 Nano Banana Pro.
+Visual summary infographic generated by Gemini 3 Pro Image Preview.
 
 ---
 
@@ -404,14 +414,14 @@ If you encounter `503 UNAVAILABLE - model overloaded` errors:
 
 ### Places API Errors
 
-- Verify `MAPS_API_KEY` is set correctly in `.env`
+- Verify `MAPS_API_KEY` is set correctly in `app/.env`
 - Ensure Places API is enabled in Google Cloud Console
 - Check API key restrictions (should allow Places API)
 
 ### Import Errors
 
 - Verify all `__init__.py` files export required modules
-- Check that dependencies are installed: `pip install -r requirements.txt`
+- Check that dependencies are installed: `uv sync` (or `make install`)
 
 ### Artifacts Not Showing in UI
 

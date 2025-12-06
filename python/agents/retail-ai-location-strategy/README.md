@@ -24,6 +24,10 @@ A multi-agent AI pipeline for retail site selection, built with [Google Agent De
   </tbody>
 </table>
 
+<p align="center">
+  <img src="assets/images/hero-image.png" alt="Retail AI Location Strategy - Multi-Agent Pipeline" width="700">
+</p>
+
 ## What It Does
 
 Given a location and business type, this pipeline automatically:
@@ -34,11 +38,19 @@ Given a location and business type, this pipeline automatically:
 - Generates strategic recommendations with extended reasoning
 - Produces an HTML executive report and visual infographic
 
+<p align="center">
+  <img src="assets/images/simplified-pipeline.png" alt="7-Stage Pipeline Flow" width="700">
+</p>
+
 ---
 
-## Getting Started: From Zero to Running Agent in 1 Minute
+## Getting Started: From Zero to Running Agent in 5 Minutes
 
-**Prerequisites:** **[Python 3.10+](https://www.python.org/downloads/)**, **[uv](https://github.com/astral-sh/uv)**, **[Google Maps API key](https://console.cloud.google.com/apis/credentials)** (with Places API enabled)
+**Prerequisites:**
+- **[Python 3.10-3.12](https://www.python.org/downloads/)**
+- **[uv](https://github.com/astral-sh/uv)** (recommended) or pip
+- **[Google Maps API key](https://console.cloud.google.com/apis/credentials)** (with Places API enabled)
+- **[Node.js 18+](https://nodejs.org/)** *(only required for AG-UI frontend)*
 
 You have two options to get started. Choose the one that best fits your setup:
 
@@ -74,6 +86,25 @@ From the `retail-ai-location-strategy` directory, install dependencies and start
 ```bash
 make install && make dev
 ```
+
+#### What You'll See
+
+1. Open `http://localhost:8501` in your browser
+2. Select **"app"** from the agent dropdown
+3. Type a query like: *"I want to open a coffee shop in Indiranagar, Bangalore"*
+4. Watch the 7-stage pipeline execute:
+   - **Intake** → Extract location and business type
+   - **Market Research** → Web search for demographics and trends
+   - **Competitor Mapping** → Google Maps Places API for competitors
+   - **Gap Analysis** → Python code execution for viability scores
+   - **Strategy Advisor** → Extended reasoning for recommendations
+   - **Report Generator** → HTML executive report
+   - **Infographic Generator** → Visual summary image
+
+<p align="center">
+  <img src="assets/gifs/adk-web-demo.gif" alt="ADK Web Demo" width="700">
+</p>
+
 Your agent is now running at `http://localhost:8501`.
 
 ---
@@ -165,9 +196,75 @@ For production deployments with CI/CD, see the [Agent Starter Pack Development G
 | **Components** | Multi-agent, Function calling, Web search, Google Maps API, Code execution, Image generation |
 | **Vertical** | Retail / Real Estate |
 
-## Interactive UI (Optional)
+<p align="center">
+  <img src="assets/images/agent-tools.png" alt="Agent Tools Integration" width="700">
+</p>
 
-For a richer experience with real-time pipeline visualization:
+## Model Configuration
+
+This agent supports multiple Gemini model families. Edit `app/config.py` to switch models based on your access and quota:
+
+| Model Option | Text Models | Image Model | Notes |
+|--------------|-------------|-------------|-------|
+| **Gemini 2.5 Pro** (default) | `gemini-2.5-pro` | `gemini-3-pro-image-preview` | **Recommended** - Stable, production-ready |
+| **Gemini 3 Pro Preview** | `gemini-3-pro-preview` | `gemini-3-pro-image-preview` | Recently launched - may throw 503 "model overloaded" errors |
+| **Gemini 2.5 Flash** | `gemini-2.5-flash` | `gemini-2.0-flash-exp` | Fastest, lowest cost |
+
+**Gemini 3 Documentation:**
+- [Vertex AI - Get started with Gemini 3](https://cloud.google.com/vertex-ai/generative-ai/docs/start/get-started-with-gemini-3)
+- [Google AI - Gemini 3 API](https://ai.google.dev/gemini-api/docs/gemini-3)
+
+To use Gemini 3 text models, uncomment Option 2 in `app/config.py`:
+
+```python
+# app/config.py
+
+# Comment out Option 1 (2.5 Pro)
+# FAST_MODEL = "gemini-2.5-pro"
+# ...
+
+# Uncomment Option 2 (3 Pro Preview)
+FAST_MODEL = "gemini-3-pro-preview"
+PRO_MODEL = "gemini-3-pro-preview"
+CODE_EXEC_MODEL = "gemini-3-pro-preview"
+IMAGE_MODEL = "gemini-3-pro-image-preview"
+```
+
+> **Note:** If you encounter `503 UNAVAILABLE - model overloaded` errors with Gemini 3, switch back to Gemini 2.5 Pro for better reliability.
+
+---
+
+## AG-UI Frontend (Optional)
+
+Want a richer experience beyond the default ADK web UI? This agent includes an optional **[AG-UI Protocol](https://docs.ag-ui.com/)** frontend built with [CopilotKit](https://docs.copilotkit.ai/) that provides:
+
+- **Real-time Pipeline Timeline**: Watch the 7-stage analysis unfold with collapsible steps
+- **Generative UI**: Rich visualizations appear in the chat as the agent works
+- **Interactive Dashboard**: Location scores, competitor stats, market characteristics
+- **Bidirectional State Sync**: Frontend and ADK agent share state in real-time
+
+<p align="center">
+  <img src="assets/images/ag-ui-sync.png" alt="AG-UI Bidirectional State Sync" width="650">
+</p>
+
+### Quick Start
+
+```bash
+# First time: Install frontend dependencies
+make ag-ui-install
+
+# Run both backend and frontend servers
+make ag-ui
+```
+
+This starts:
+- **Backend** at `http://localhost:8000` (FastAPI + ADK agent)
+- **Frontend** at `http://localhost:3000` (Next.js + CopilotKit)
+
+Open `http://localhost:3000` to see the interactive dashboard.
+
+<details>
+<summary>Manual Setup (Alternative)</summary>
 
 ```bash
 # Terminal 1: Start the backend
@@ -183,8 +280,7 @@ cp .env.local.example .env.local
 npm run dev
 # Runs at http://localhost:3000
 ```
-
-Open `http://localhost:3000` to see the interactive dashboard with collapsible pipeline steps, live progress tracking, and downloadable reports.
+</details>
 
 See [app/frontend/README.md](app/frontend/README.md) for detailed frontend documentation.
 
@@ -209,22 +305,19 @@ See [app/frontend/README.md](app/frontend/README.md) for detailed frontend docum
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    User[User Query] --> A0[IntakeAgent]
-    A0 --> A1[MarketResearchAgent<br/>Google Search]
-    A1 --> A2[CompetitorMappingAgent<br/>Maps API]
-    A2 --> A3[GapAnalysisAgent<br/>Code Execution]
-    A3 --> A4[StrategyAdvisorAgent<br/>Extended Reasoning]
-    A4 --> A5[ReportGeneratorAgent<br/>HTML Report]
-    A5 --> A6[InfographicGeneratorAgent<br/>Image Generation]
-
-    A4 -.-> O1[intelligence_report.json]
-    A5 -.-> O2[executive_report.html]
-    A6 -.-> O3[infographic.png]
-```
+<p align="center">
+  <img src="assets/images/pipeline-architecture.png" alt="Pipeline Architecture" width="700">
+</p>
 
 The pipeline is built as a `SequentialAgent` that orchestrates 7 specialized sub-agents, each handling a specific phase of the analysis.
+
+### State Flow
+
+Each agent reads from and writes to a shared session state, enabling seamless data flow between stages:
+
+<p align="center">
+  <img src="assets/images/data-flow.png" alt="Data Flow Between Agents" width="650">
+</p>
 
 ---
 
@@ -232,16 +325,22 @@ The pipeline is built as a `SequentialAgent` that orchestrates 7 specialized sub
 
 ```
 retail-ai-location-strategy/
-├── Makefile              # Build and run commands
-├── pyproject.toml        # Dependencies
-├── .env.example          # Environment template
-├── notebook/             # Jupyter notebooks
-└── app/                  # Agent package
-    ├── __init__.py       # Package init
-    ├── .env              # Environment variables
-    ├── agent.py          # Main SequentialAgent definition
-    ├── config.py         # Model and auth configuration
-    ├── sub_agents/       # Specialized agents
+├── Makefile                 # Build and run commands
+├── pyproject.toml           # Dependencies and package config
+├── .env.example             # Environment template
+├── README.md                # This file
+├── DEVELOPER_GUIDE.md       # Detailed developer documentation
+│
+├── notebook/                # Original Gemini API notebook
+│   └── retail_ai_location_strategy_gemini_3.ipynb
+│
+└── app/                     # Agent package (exported as root_agent)
+    ├── __init__.py          # Exports root_agent for ADK discovery
+    ├── agent.py             # SequentialAgent pipeline definition
+    ├── config.py            # Model selection and retry config
+    ├── .env                 # Environment variables (from .env.example)
+    │
+    ├── sub_agents/          # 7 specialized agents
     │   ├── intake_agent.py
     │   ├── market_research.py
     │   ├── competitor_mapping.py
@@ -249,13 +348,15 @@ retail-ai-location-strategy/
     │   ├── strategy_advisor.py
     │   ├── report_generator.py
     │   └── infographic_generator.py
-    ├── tools/            # Custom tools
-    │   ├── places_search.py
-    │   ├── html_report_generator.py
-    │   └── image_generator.py
-    ├── schemas/          # Pydantic schemas
-    ├── callbacks/        # Pipeline callbacks
-    └── frontend/         # Interactive UI (optional)
+    │
+    ├── tools/               # Custom function tools
+    │   ├── places_search.py         # Google Maps Places API
+    │   ├── html_report_generator.py # Executive report generation
+    │   └── image_generator.py       # Infographic generation
+    │
+    ├── schemas/             # Pydantic output schemas
+    ├── callbacks/           # Pipeline lifecycle callbacks
+    └── frontend/            # AG-UI interactive dashboard (optional)
 ```
 
 ---

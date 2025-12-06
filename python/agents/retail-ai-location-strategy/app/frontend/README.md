@@ -29,23 +29,33 @@ A rich, interactive frontend for the Retail AI Location Strategy ADK agent using
 
 ## Quick Start
 
-### Prerequisites
+### Recommended: Use Makefile
+
+The easiest way to run the AG-UI frontend is using the Makefile from the project root:
+
+```bash
+# From retail-ai-location-strategy directory
+make ag-ui-install  # First time only
+make ag-ui          # Starts both backend (8000) and frontend (3000)
+```
+
+### Prerequisites (Manual Setup)
 
 - Node.js 18+
-- Python 3.11+
+- Python 3.10+
 - Google API Key (for Gemini)
 - Google Maps API Key (for Places API)
 
-### 1. Backend Setup
+### 1. Backend Setup (Manual)
 
 ```bash
-# From the retail_ai_location_strategy_adk directory
-cd frontend/backend
+# From the retail-ai-location-strategy directory
+cd app/frontend/backend
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Make sure parent .env has your API keys:
+# Make sure app/.env has your API keys:
 # GOOGLE_API_KEY=your_key
 # MAPS_API_KEY=your_maps_key
 
@@ -54,11 +64,11 @@ python main.py
 # Server runs at http://localhost:8000
 ```
 
-### 2. Frontend Setup
+### 2. Frontend Setup (Manual)
 
 ```bash
-# In a new terminal, from retail_ai_location_strategy_adk directory
-cd frontend
+# In a new terminal, from retail-ai-location-strategy directory
+cd app/frontend
 
 # Install dependencies
 npm install
@@ -83,7 +93,7 @@ npm run dev
 ## Project Structure
 
 ```
-frontend/
+app/frontend/
 ├── backend/
 │   ├── main.py              # FastAPI + ADKAgent wrapper
 │   └── requirements.txt     # Python dependencies
@@ -118,7 +128,7 @@ frontend/
 
 ## Environment Variables
 
-### Backend (parent `.env`)
+### Backend (`app/.env`)
 
 ```bash
 GOOGLE_API_KEY=your_google_api_key
@@ -169,8 +179,8 @@ useCoAgentStateRender({
 
 ### Backend won't start
 
-1. Ensure you're in the correct directory: `frontend/backend`
-2. Check that parent `.env` file exists with API keys
+1. Ensure you're in the correct directory: `app/frontend/backend`
+2. Check that `app/.env` file exists with API keys
 3. Verify `ag-ui-adk` is installed: `pip install ag-ui-adk`
 
 ### Frontend shows "Connection Error"
@@ -196,11 +206,11 @@ useCoAgentStateRender({
 
 ### Modifying Backend
 
-The backend in `frontend/backend/main.py` wraps the existing ADK agent without modifications. To change agent behavior, modify the files in the parent directory:
+The backend in `app/frontend/backend/main.py` wraps the existing ADK agent without modifications. To change agent behavior, modify the files in the `app/` directory:
 
-- `agent.py` - Root agent definition
-- `sub_agents/` - Individual sub-agents
-- `callbacks/pipeline_callbacks.py` - State updates
+- `app/agent.py` - Root agent definition
+- `app/sub_agents/` - Individual sub-agents
+- `app/callbacks/pipeline_callbacks.py` - State updates
 
 ## License
 
