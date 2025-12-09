@@ -12,6 +12,16 @@
     <header>
       <h1>ADK Bidi-streaming Demo</h1>
       <div class="subtitle">Real-time bidirectional streaming with Google ADK</div>
+      <div class="header-options">
+        <label class="header-checkbox" title="Enable model to proactively respond without explicit prompts (Native audio models only)">
+          <input type="checkbox" id="enableProactivity">
+          <span>Proactivity</span>
+        </label>
+        <label class="header-checkbox" title="Enable model to detect and adapt to emotional cues (Native audio models only)">
+          <input type="checkbox" id="enableAffectiveDialog">
+          <span>Affective Dialog</span>
+        </label>
+      </div>
       <div class="connection-status">
         <span class="status-indicator" id="statusIndicator"></span>
         <span id="statusText">Connecting...</span>

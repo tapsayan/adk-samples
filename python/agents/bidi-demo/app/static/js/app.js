@@ -12,9 +12,44 @@ const sessionId = "demo-session-" + Math.random().toString(36).substring(7);
 let websocket = null;
 let is_audio = false;
 
-// Build WebSocket URL (mode is determined server-side from model name)
+// Get checkbox elements for RunConfig options
+const enableProactivityCheckbox = document.getElementById("enableProactivity");
+const enableAffectiveDialogCheckbox = document.getElementById("enableAffectiveDialog");
+
+// Reconnect WebSocket when RunConfig options change
+function handleRunConfigChange() {
+  if (websocket && websocket.readyState === WebSocket.OPEN) {
+    addSystemMessage("Reconnecting with updated settings...");
+    addConsoleEntry('outgoing', 'Reconnecting due to settings change', {
+      proactivity: enableProactivityCheckbox.checked,
+      affective_dialog: enableAffectiveDialogCheckbox.checked
+    }, '🔄', 'system');
+    websocket.close();
+    // connectWebsocket() will be called by onclose handler after delay
+  }
+}
+
+// Add change listeners to RunConfig checkboxes
+enableProactivityCheckbox.addEventListener("change", handleRunConfigChange);
+enableAffectiveDialogCheckbox.addEventListener("change", handleRunConfigChange);
+
+// Build WebSocket URL with RunConfig options as query parameters
 function getWebSocketUrl() {
-  return "ws://" + window.location.host + "/ws/" + userId + "/" + sessionId;
+  const baseUrl = "ws://" + window.location.host + "/ws/" + userId + "/" + sessionId;
+  const params = new URLSearchParams();
+
+  // Add proactivity option if checked
+  if (enableProactivityCheckbox && enableProactivityCheckbox.checked) {
+    params.append("proactivity", "true");
+  }
+
+  // Add affective dialog option if checked
+  if (enableAffectiveDialogCheckbox && enableAffectiveDialogCheckbox.checked) {
+    params.append("affective_dialog", "true");
+  }
+
+  const queryString = params.toString();
+  return queryString ? baseUrl + "?" + queryString : baseUrl;
 }
 
 // Get DOM elements
@@ -333,9 +368,47 @@ function connectWebsocket() {
         : transcriptionText;
       eventSummary = `Output Transcription: "${truncated}"`;
       eventEmoji = '📝';
+    } else if (adkEvent.usageMetadata) {
+      // Show token usage information
+      const usage = adkEvent.usageMetadata;
+      const promptTokens = usage.promptTokenCount || 0;
+      const responseTokens = usage.candidatesTokenCount || 0;
+      const totalTokens = usage.totalTokenCount || 0;
+      eventSummary = `Token Usage: ${totalTokens.toLocaleString()} total (${promptTokens.toLocaleString()} prompt + ${responseTokens.toLocaleString()} response)`;
+      eventEmoji = '📊';
     } else if (adkEvent.content && adkEvent.content.parts) {
       const hasText = adkEvent.content.parts.some(p => p.text);
       const hasAudio = adkEvent.content.parts.some(p => p.inlineData);
+      const hasExecutableCode = adkEvent.content.parts.some(p => p.executableCode);
+      const hasCodeExecutionResult = adkEvent.content.parts.some(p => p.codeExecutionResult);
+
+      if (hasExecutableCode) {
+        // Show executable code
+        const codePart = adkEvent.content.parts.find(p => p.executableCode);
+        if (codePart && codePart.executableCode) {
+          const code = codePart.executableCode.code || '';
+          const language = codePart.executableCode.language || 'unknown';
+          const truncated = code.length > 60
+            ? code.substring(0, 60).replace(/\n/g, ' ') + '...'
+            : code.replace(/\n/g, ' ');
+          eventSummary = `Executable Code (${language}): ${truncated}`;
+          eventEmoji = '💻';
+        }
+      }
+
+      if (hasCodeExecutionResult) {
+        // Show code execution result
+        const resultPart = adkEvent.content.parts.find(p => p.codeExecutionResult);
+        if (resultPart && resultPart.codeExecutionResult) {
+          const outcome = resultPart.codeExecutionResult.outcome || 'UNKNOWN';
+          const output = resultPart.codeExecutionResult.output || '';
+          const truncatedOutput = output.length > 60
+            ? output.substring(0, 60).replace(/\n/g, ' ') + '...'
+            : output.replace(/\n/g, ' ');
+          eventSummary = `Code Execution Result (${outcome}): ${truncatedOutput}`;
+          eventEmoji = outcome === 'OUTCOME_OK' ? '✅' : '❌';
+        }
+      }
 
       if (hasText) {
         // Show text preview in summary

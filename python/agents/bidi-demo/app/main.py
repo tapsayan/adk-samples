@@ -70,11 +70,24 @@ async def root():
 
 @app.websocket("/ws/{user_id}/{session_id}")
 async def websocket_endpoint(
-    websocket: WebSocket, user_id: str, session_id: str
+    websocket: WebSocket,
+    user_id: str,
+    session_id: str,
+    proactivity: bool = False,
+    affective_dialog: bool = False,
 ) -> None:
-    """WebSocket endpoint for bidirectional streaming with ADK."""
+    """WebSocket endpoint for bidirectional streaming with ADK.
+
+    Args:
+        websocket: The WebSocket connection
+        user_id: User identifier
+        session_id: Session identifier
+        proactivity: Enable proactive audio (native audio models only)
+        affective_dialog: Enable affective dialog (native audio models only)
+    """
     logger.debug(
-        "WebSocket connection request: " f"user_id={user_id}, session_id={session_id}"
+        f"WebSocket connection request: user_id={user_id}, session_id={session_id}, "
+        f"proactivity={proactivity}, affective_dialog={affective_dialog}"
     )
     await websocket.accept()
     logger.debug("WebSocket connection accepted")
@@ -95,16 +108,24 @@ async def websocket_endpoint(
         # Native audio models require AUDIO response modality
         # with audio transcription
         response_modalities = ["AUDIO"]
+
+        # Build RunConfig with optional proactivity and affective dialog
+        # These features are only supported on native audio models
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
             response_modalities=response_modalities,
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
             session_resumption=types.SessionResumptionConfig(),
+            proactivity=(
+                types.ProactivityConfig(proactive_audio=True) if proactivity else None
+            ),
+            enable_affective_dialog=affective_dialog if affective_dialog else None,
         )
         logger.debug(
             f"Native audio model detected: {model_name}, "
-            "using AUDIO response modality"
+            f"using AUDIO response modality, "
+            f"proactivity={proactivity}, affective_dialog={affective_dialog}"
         )
     else:
         # Half-cascade models support TEXT response modality
@@ -121,6 +142,13 @@ async def websocket_endpoint(
             f"Half-cascade model detected: {model_name}, "
             "using TEXT response modality"
         )
+        # Warn if user tried to enable native-audio-only features
+        if proactivity or affective_dialog:
+            logger.warning(
+                f"Proactivity and affective dialog are only supported on native "
+                f"audio models. Current model: {model_name}. "
+                f"These settings will be ignored."
+            )
     logger.debug(f"RunConfig created: {run_config}")
 
     # Get or create session (handles both new sessions and reconnections)
