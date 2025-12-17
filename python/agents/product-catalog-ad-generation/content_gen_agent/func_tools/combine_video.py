@@ -13,7 +13,6 @@
 # limitations under the License.
 """Combines video clips, audio, and voiceovers into a final video."""
 
-import asyncio
 import datetime
 import logging
 import os
@@ -24,6 +23,7 @@ from typing import Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 from google import genai
 from google.adk.tools import ToolContext
+from google.api_core import exceptions as api_exceptions
 from google.cloud import storage
 from moviepy import (
     AudioFileClip,
@@ -57,14 +57,12 @@ def _get_storyline_schema(num_images: int) -> List[Dict]:
 
     schema = []
     if num_images > 1:
-        schema.append(
-            {"name": "before", "generate": True, "step": 0, "duration": 3}
-        )
+        schema.append({"name": "before", "generate": True, "step": 0, "duration": 3})
 
     for i in range(num_images - 2):
         schema.append(
             {
-                "name": f"showcase_{i+1}",
+                "name": f"showcase_{i + 1}",
                 "generate": True,
                 "step": i + 1,
                 "duration": 3,
@@ -120,10 +118,46 @@ def _upload_to_gcs(video_bytes: bytes, filename: str) -> Optional[str]:
         blob.upload_from_string(video_bytes, content_type="video/mp4")
 
         gcs_uri = f"gs://{bucket_name}/{blob_name}"
-        logging.info(f"Uploaded combined video to GCS: {gcs_uri}")
+        logging.info("Uploaded combined video to GCS: %s", gcs_uri)
         return gcs_uri
-    except Exception as e:
-        logging.error(f"Failed to upload video to GCS: {e}", exc_info=True)
+    except (api_exceptions.GoogleAPICallError, OSError) as e:
+        logging.error("Failed to upload video to GCS: %s", e, exc_info=True)
+        return None
+
+
+async def _load_single_clip(
+    filename: str,
+    tool_context: ToolContext,
+    temp_dir: str,
+    storyline: List[Dict],
+) -> Optional[Tuple[VideoFileClip, str]]:
+    """Loads and processes a single video clip artifact."""
+    try:
+        artifact = await tool_context.load_artifact(filename)
+        if not (artifact and artifact.inline_data and artifact.inline_data.data):
+            logging.warning("Could not load artifact data for %s.", filename)
+            return None
+
+        temp_path = os.path.join(temp_dir, os.path.basename(filename))
+        with open(temp_path, "wb") as f:
+            f.write(artifact.inline_data.data)
+
+        clip = VideoFileClip(temp_path)
+        clip_index_str = filename.split("_")[0]
+        if clip_index_str.isdigit():
+            clip_index = int(clip_index_str)
+            if 0 <= clip_index < len(storyline):
+                duration = storyline[clip_index]["duration"]
+                if clip.duration > duration:
+                    clip = clip.subclipped(0, duration)
+        return clip, temp_path
+    except (OSError, ValueError) as e:
+        logging.error(
+            "Failed to load/process video artifact '%s': %s",
+            filename,
+            e,
+            exc_info=True,
+        )
         return None
 
 
@@ -151,32 +185,13 @@ async def _load_and_process_video_clips(
         if not filename:
             logging.warning("Skipping video file with missing filename.")
             continue
-        try:
-            artifact = await tool_context.load_artifact(filename)
-            if not (artifact and artifact.inline_data and artifact.inline_data.data):
-                logging.warning(f"Could not load artifact data for {filename}.")
-                continue
 
-            temp_path = os.path.join(temp_dir, os.path.basename(filename))
-            with open(temp_path, "wb") as f:
-                f.write(artifact.inline_data.data)
-
-            clip = VideoFileClip(temp_path)
-            clip_index_str = filename.split("_")[0]
-            if clip_index_str.isdigit():
-                clip_index = int(clip_index_str)
-                if 0 <= clip_index < len(storyline):
-                    duration = storyline[clip_index]["duration"]
-                    if clip.duration > duration:
-                        clip = clip.subclipped(0, duration)
-
+        result = await _load_single_clip(filename, tool_context, temp_dir, storyline)
+        if result:
+            clip, temp_path = result
             video_clips.append(clip)
             temp_paths.append(temp_path)
-        except Exception as e:
-            logging.error(
-                f"Failed to load/process video artifact '{filename}': {e}",
-                exc_info=True,
-            )
+
     return video_clips, temp_paths
 
 
@@ -222,9 +237,50 @@ async def _load_and_process_audio_clips(
 
         if audio_clips:
             return CompositeAudioClip(audio_clips).with_duration(final_duration)
-    except Exception as e:
-        logging.error(f"Failed to load or process audio: {e}", exc_info=True)
+    except (OSError, ValueError) as e:
+        logging.error("Failed to load or process audio: %s", e, exc_info=True)
     return None
+
+
+async def _combine_and_upload_video(
+    video_clips: List[VideoFileClip],
+    audio_file: str,
+    voiceover_file: Optional[str],
+    tool_context: ToolContext,
+    temp_dir: str,
+) -> Optional[Dict[str, str]]:
+    """Combines video clips with audio and uploads the result."""
+    try:
+        final_clip = concatenate_videoclips(video_clips, method="compose")
+        final_clip.audio = await _load_and_process_audio_clips(
+            audio_file, voiceover_file, final_clip.duration, tool_context, temp_dir
+        )
+
+        filename = f"combined_video_{int(time.time())}.mp4"
+        output_path = os.path.join(temp_dir, filename)
+        final_clip.write_videofile(output_path, codec=VIDEO_CODEC)
+
+        with open(output_path, "rb") as f:
+            video_bytes = f.read()
+
+        gcs_uri = _upload_to_gcs(video_bytes, filename)
+        await tool_context.save_artifact(
+            filename,
+            genai.types.Part.from_bytes(data=video_bytes, mime_type="video/mp4"),
+        )
+
+        result = {"name": filename}
+        if gcs_uri:
+            result["gcs_uri"] = gcs_uri
+        return result
+    except (OSError, ValueError) as e:
+        logging.error(
+            "An error occurred during video combination: %s", e, exc_info=True
+        )
+        return None
+    finally:
+        for clip in video_clips:
+            clip.close()
 
 
 async def combine(
@@ -259,36 +315,6 @@ async def combine(
             logging.error("No valid video clips could be loaded.")
             return None
 
-        try:
-            final_clip = concatenate_videoclips(video_clips, method="compose")
-            final_clip.audio = await _load_and_process_audio_clips(
-                audio_file, voiceover_file, final_clip.duration, tool_context, temp_dir
-            )
-
-            filename = f"combined_video_{int(time.time())}.mp4"
-            output_path = os.path.join(temp_dir, filename)
-            final_clip.write_videofile(output_path, codec=VIDEO_CODEC)
-
-            with open(output_path, "rb") as f:
-                video_bytes = f.read()
-
-            gcs_uri = _upload_to_gcs(video_bytes, filename)
-            await tool_context.save_artifact(
-                filename,
-                genai.types.Part.from_bytes(
-                    data=video_bytes, mime_type="video/mp4"
-                ),
-            )
-
-            result = {"name": filename}
-            if gcs_uri:
-                result["gcs_uri"] = gcs_uri
-            return result
-        except Exception as e:
-            logging.error(
-                f"An error occurred during video combination: {e}", exc_info=True
-            )
-            return None
-        finally:
-            for clip in video_clips:
-                clip.close()
+        return await _combine_and_upload_video(
+            video_clips, audio_file, voiceover_file, tool_context, temp_dir
+        )

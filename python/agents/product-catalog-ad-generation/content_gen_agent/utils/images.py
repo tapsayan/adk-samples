@@ -11,10 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from google.cloud import storage
-from google.genai import types
+"""Utility functions for handling images."""
 import logging
-from typing import Optional
+import os
+from typing import TYPE_CHECKING, Literal, Optional, Tuple
+
+from google.cloud import storage
+
+if TYPE_CHECKING:
+    from google.adk.tools import ToolContext
 
 # --- Configuration ---
 logging.basicConfig(
@@ -23,25 +28,35 @@ logging.basicConfig(
 
 IMAGE_MIME_TYPE = "image/png"
 
-async def _load_gcs_image(
-    gcs_uri: str, storage_client: storage.Client
-) -> Optional[types.Part]:
-    """Loads an image from GCS and returns it as a Part object.
+
+async def load_image_resource(
+    source_type: Literal["artifact", "gcs"],
+    source_path: str,
+    tool_context: "ToolContext",
+) -> Tuple[Optional[bytes], str, str]:
+    """Loads image bytes from either a GCS path or a tool artifact.
 
     Args:
-        gcs_uri: The GCS URI of the image. Does not start with "gs://"
-        storage_client: The GCS storage client.
+        source_type (str): The source of the image ('artifact' or 'gcs').
+        source_path (str): The path to the image.
+        tool_context (ToolContext): The context for artifact management.
 
     Returns:
-        A Part object containing the image data, or None on failure.
+        A tuple with the image bytes, identifier, and MIME type.
     """
-    try:
+    identifier = os.path.basename(source_path).split(".")[0]
+    mime_suffix = "jpeg" if source_path.lower().endswith(".jpg") else "png"
+
+    if source_type == "artifact":
+        artifact = await tool_context.load_artifact(source_path)
+        image_bytes = (
+            artifact.inline_data.data if artifact and artifact.inline_data else None
+        )
+    else:
+        gcs_uri = source_path[5:] if source_path.startswith("gs://") else source_path
         bucket_name, blob_name = gcs_uri.split("/", 1)
+        storage_client = storage.Client()
         blob = storage_client.bucket(bucket_name).blob(blob_name)
         image_bytes = blob.download_as_bytes()
-        return types.Part.from_bytes(data=image_bytes, mime_type=IMAGE_MIME_TYPE)
-    except Exception as e:
-        logging.error(f"Failed to load image from '{gcs_uri}': {e}")
-        return None
 
-
+    return image_bytes, identifier, f"image/{mime_suffix}"

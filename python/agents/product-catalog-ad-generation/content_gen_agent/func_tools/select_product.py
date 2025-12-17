@@ -11,8 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Selects a product from BigQuery based on a product name."""
+import logging
 import os
+
+from google.api_core import exceptions as api_exceptions
 from google.cloud import bigquery
+
 
 def select_product_from_bq(product_name: str) -> dict:
     """
@@ -24,13 +29,11 @@ def select_product_from_bq(product_name: str) -> dict:
     Returns:
         A dictionary representing the matched product row, or None if no match is found.
     """
-    # TODO: Replace with your project ID, dataset ID, and table ID.
     project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
     dataset_id = "content_generation"
     table_id = "media_assets"
 
     client = bigquery.Client()
-    table_ref = client.dataset(dataset_id).table(table_id)
 
     # Normalize the product name for consistent searching.
     normalized_product_name = product_name.lower().strip()
@@ -49,17 +52,18 @@ def select_product_from_bq(product_name: str) -> dict:
         for row in results:
             return dict(row)
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    except api_exceptions.GoogleAPICallError as e:
+        logging.error("An error occurred: %s", e)
         return None
 
     return None
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     product = select_product_from_bq("power drill")
     if product:
-        print("Found product:")
-        print(product)
+        logging.info("Found product:")
+        logging.info(product)
     else:
-        print("Product not found.")
+        logging.info("Product not found.")
