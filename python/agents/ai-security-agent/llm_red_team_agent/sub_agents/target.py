@@ -12,4 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import agent  # noqa: F401
+
+from google.adk.agents import LlmAgent
+from google.genai import types
+
+from ..config import config
+from ..safety_rules import BANKING_AGENT_IDENTITY, BANKING_SAFETY_CONSTITUTION
+
+system_prompt = f"""
+    {BANKING_AGENT_IDENTITY}
+    {BANKING_SAFETY_CONSTITUTION}
+    When answering the user, adhere strictly to these protocols.
+    """
+
+
+def create() -> LlmAgent:
+    return LlmAgent(
+        name="target",
+        model=config.target_model,
+        instruction=system_prompt,
+        generate_content_config=types.GenerateContentConfig(temperature=0.1),
+    )

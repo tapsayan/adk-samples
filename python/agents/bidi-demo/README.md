@@ -99,7 +99,7 @@ GOOGLE_API_KEY=your_api_key_here
 
 # Model selection (optional, defaults to native audio model)
 # See "Supported Models" section below for available model names
-DEMO_AGENT_MODEL=gemini-2.5-flash-native-audio-preview-09-2025
+DEMO_AGENT_MODEL=gemini-2.5-flash-native-audio-preview-12-2025
 ```
 
 #### Getting API Credentials
@@ -278,7 +278,7 @@ The agent is defined in a separate module following ADK best practices:
 ```python
 agent = Agent(
     name="google_search_agent",
-    model=os.getenv("DEMO_AGENT_MODEL", "gemini-2.5-flash-native-audio-preview-09-2025"),
+    model=os.getenv("DEMO_AGENT_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
     tools=[google_search],
     instruction="You are a helpful assistant that can search the web."
 )
@@ -323,8 +323,8 @@ The WebSocket endpoint implements the complete bidirectional streaming pattern:
 The demo supports any Gemini model compatible with Live API:
 
 **Native Audio Models** (recommended for voice):
-- `gemini-2.5-flash-native-audio-preview-09-2025` (Gemini Live API)
-- `gemini-live-2.5-flash-preview-native-audio-09-2025` (Vertex AI)
+- `gemini-2.5-flash-native-audio-preview-12-2025` (Gemini Live API)
+- `gemini-live-2.5-flash-native-audio` (Vertex AI)
 
 Set the model via `DEMO_AGENT_MODEL` in `.env` or modify `app/google_search_agent/agent.py`.
 
