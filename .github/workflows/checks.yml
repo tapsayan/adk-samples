@@ -32,11 +32,11 @@ jobs:
           enable-cache: true
 
       - name: Run Ruff Format
-        run: uv run ruff format .
+        run: uvx ruff format .
 
       - name: Run Ruff Check WITHOUT Fix
         # Running with --fix will resolve the ruff errors automatically
-        run: uv run ruff check .
+        run: uvx ruff check .
 
       - name: Commit and Push Fixes
         # This step only runs if Ruff actually changed files
