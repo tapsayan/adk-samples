@@ -1,9 +1,9 @@
 """Code related utility functions."""
 
-from typing import Any
-import subprocess
 import os
+import subprocess
 import time
+from typing import Any
 
 from google.adk.agents import callback_context as callback_context_module
 
@@ -175,7 +175,11 @@ def get_run_code_condition(
         if "exit()" not in raw_code:
             return True
     elif agent_name.startswith("submission"):
-        if "debug_agent" not in agent_name and "exit()" not in raw_code and "submission.csv" in raw_code:
+        if (
+            "debug_agent" not in agent_name
+            and "exit()" not in raw_code
+            and "submission.csv" in raw_code
+        ):
             return True
         if "debug_agent" in agent_name and "exit()" not in raw_code:
             return True
@@ -249,7 +253,7 @@ def evaluate_code(
                 try:
                     score = extract_performance_from_text(result_dict.get("stdout", ""))
                     score = float(score)
-                except:
+                except Exception:
                     score = 1e9 if lower else 0
             else:
                 score = 1e9 if lower else 0

@@ -1,20 +1,21 @@
 """Utility functions for debug agents."""
 
-from typing import Optional
 import functools
+from typing import Optional
 
 from google.adk import agents
 from google.adk.agents import callback_context as callback_context_module
-from google.adk.models import llm_response as llm_response_module
 from google.adk.models import llm_request as llm_request_module
-from google.genai import types
+from google.adk.models import llm_response as llm_response_module
 from google.adk.tools.google_search_tool import google_search
-
-from machine_learning_engineering.shared_libraries import debug_prompt
-from machine_learning_engineering.shared_libraries import code_util
-from machine_learning_engineering.shared_libraries import common_util
-from machine_learning_engineering.shared_libraries import check_leakage_util
-from machine_learning_engineering.shared_libraries import config
+from google.genai import types
+from machine_learning_engineering.shared_libraries import (
+    check_leakage_util,
+    code_util,
+    common_util,
+    config,
+    debug_prompt,
+)
 
 
 def check_rollback(
@@ -179,7 +180,9 @@ def get_code_from_response(
     if agent_name.startswith("check_data_use"):
         if "All the provided information is used" in code:
             callback_context.state[f"check_data_use_finish_{suffix}"] = True
-        check_data_use_finish = callback_context.state.get(f"check_data_use_finish_{suffix}", False)
+        check_data_use_finish = callback_context.state.get(
+            f"check_data_use_finish_{suffix}", False
+        )
         if not check_data_use_finish:
             new_code = code
         else:
@@ -188,7 +191,9 @@ def get_code_from_response(
         if "debug" not in agent_name:
             task_id = callback_context.agent_name.split("_")[-1]
             step = callback_context.state.get(f"refine_step_{task_id}", 0)
-            code_block = callback_context.state.get(f"refine_code_block_{step}_{task_id}", "")
+            code_block = callback_context.state.get(
+                f"refine_code_block_{step}_{task_id}", ""
+            )
             prev_code = callback_context.state.get(f"train_code_{step}_{task_id}", "")
             new_code = prev_code.replace(code_block, code)
         else:
@@ -330,9 +335,7 @@ def get_run_and_debug_agent(
             prefix=prefix,
             suffix=suffix,
         ),
-        description=(
-            f"{agent_description} until it succeeds."
-        ),
+        description=(f"{agent_description} until it succeeds."),
         sub_agents=[run_sequential_agent],
         max_iterations=config.CONFIG.max_retry,
     )

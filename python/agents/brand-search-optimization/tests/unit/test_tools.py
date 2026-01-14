@@ -16,10 +16,9 @@
 
 from unittest.mock import MagicMock, patch
 
-from google.adk.tools import ToolContext
-
-from brand_search_optimization.tools import bq_connector
 from brand_search_optimization.shared_libraries import constants
+from brand_search_optimization.tools import bq_connector
+from google.adk.tools import ToolContext
 
 
 class TestBrandSearchOptimization:

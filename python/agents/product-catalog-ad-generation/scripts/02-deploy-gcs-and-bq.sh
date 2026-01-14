@@ -43,7 +43,7 @@ fi
 REGION=${REGION:-"us-central1"}
 
 # --- GCS Bucket Name ---
-# Bucket for storing static content like template images and branding.
+# Bucket for storing static content like branding.
 STATIC_CONTENT_BUCKET="${PROJECT_ID}-contentgen-static"
 
 # --- BigQuery Configuration ---
@@ -65,7 +65,7 @@ echo
 
 # --- Create Folders ---
 echo "📁 Creating folders in the bucket..."
-echo "   -> Folders 'template_images', 'branding_logos', and 'products' will be created by upload."
+echo "   -> Folders 'branding_logos' and 'products' will be created by upload."
 echo
 
 # --- Function to handle uploads with confirmation ---
@@ -96,41 +96,15 @@ upload_with_confirmation() {
   echo
 }
 
-# --- Upload Template Images ---
-upload_with_confirmation "static/uploads/generated_image_template" "template_images"
-
 # --- Upload Branding Logos ---
 upload_with_confirmation "static/uploads/branding" "branding_logos"
 
 # --- Upload Product Images ---
 upload_with_confirmation "static/uploads/products" "products"
 
-# --- Upload Videos ---
-# upload_with_confirmation "static/uploads/videos" "videos"
-
 # --- BigQuery Setup ---
 echo "📊 Creating BigQuery dataset and table..."
-# Check if dataset exists
-if bq show "${PROJECT_ID}:${BQ_DATASET}" &> /dev/null; then
-    echo "   -> Dataset ${BQ_DATASET} already exists."
-    read -p "   -> Do you want to delete and recreate the dataset? This will also delete the '${BQ_TABLE}' table. (y/n) " -n 1 -r
-    echo # Move to a new line
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "   -> Deleting existing dataset ${BQ_DATASET}..."
-        bq rm -r -f --dataset "${PROJECT_ID}:${BQ_DATASET}"
-        echo "   -> Creating new dataset ${BQ_DATASET}..."
-        bq mk --dataset --location="${REGION}" "${PROJECT_ID}:${BQ_DATASET}"
-        echo "   -> Dataset ${BQ_DATASET} recreated."
-    else
-        echo "   -> Skipping dataset recreation. Exiting script."
-        exit 0
-    fi
-else
-    # Create dataset if it doesn't exist
-    echo "   -> Creating dataset ${BQ_DATASET}..."
-    bq mk --dataset --location="${REGION}" "${PROJECT_ID}:${BQ_DATASET}"
-    echo "   -> Dataset ${BQ_DATASET} created."
-fi
+# Dataset creation is now handled inside the Python script below to avoid CLI issues.
 
 # --- Populate BigQuery Table using Gemini ---
 echo "🤖 Populating BigQuery table using Gemini..."
@@ -138,8 +112,12 @@ echo "🤖 Populating BigQuery table using Gemini..."
 # Install required Python libraries
 echo "   -> Installing Python dependencies..."
 
+# Check if uv command exists
+if command -v uv &>/dev/null; then
+    echo "Using uv pip..."
+    pip_cmd="uv pip"
 # Check if pip3 command exists
-if command -v pip3 &>/dev/null; then
+elif command -v pip3 &>/dev/null; then
     echo "Using pip3..."
     pip_cmd="pip3"
 # If pip3 is not found, check for pip
@@ -147,11 +125,15 @@ elif command -v pip &>/dev/null; then
     echo "Using pip..."
     pip_cmd="pip"
 else
-    echo "Error: pip or pip3 not found. Please install Python and pip."
+    echo "Error: uv, pip, or pip3 not found. Please install uv or Python and pip."
     exit 1
 fi
 
-"$pip_cmd" install --upgrade --user -q google-genai google-cloud-bigquery google-cloud-storage
+if [[ "$pip_cmd" == "uv pip" ]]; then
+    $pip_cmd install --upgrade -q google-genai google-cloud-bigquery google-cloud-storage
+else
+    "$pip_cmd" install --upgrade --user -q google-genai google-cloud-bigquery google-cloud-storage
+fi
 
 # Run the Python script
 echo "   -> Running Python script to populate BigQuery..."
@@ -169,7 +151,6 @@ echo
 # --- Output bucket name for user ---
 echo "📋 Please use these full bucket destinations for the next steps:"
 echo "   Static Content Bucket: gs://${STATIC_CONTENT_BUCKET}"
-echo "   Template Images Folder: gs://${STATIC_CONTENT_BUCKET}/template_images/"
 echo "   Branding & Logos Folder: gs://${STATIC_CONTENT_BUCKET}/branding_logos/"
 echo "   Products Folder: gs://${STATIC_CONTENT_BUCKET}/products/"
 echo

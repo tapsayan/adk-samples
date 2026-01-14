@@ -1,22 +1,29 @@
 """Demonstration of Machine Learning Engineering Agent using Agent Development Kit"""
 
-import os
 import json
+import os
 from typing import Optional
-from google.genai import types
-from google.adk.agents import callback_context as callback_context_module
 
 from google.adk import agents
-from machine_learning_engineering.sub_agents.initialization import agent as initialization_agent_module
-from machine_learning_engineering.sub_agents.refinement import agent as refinement_agent_module
-from machine_learning_engineering.sub_agents.ensemble import agent as ensemble_agent_module
-from machine_learning_engineering.sub_agents.submission import agent as submission_agent_module
-
+from google.adk.agents import callback_context as callback_context_module
+from google.genai import types
 from machine_learning_engineering import prompt
+from machine_learning_engineering.sub_agents.ensemble import (
+    agent as ensemble_agent_module,
+)
+from machine_learning_engineering.sub_agents.initialization import (
+    agent as initialization_agent_module,
+)
+from machine_learning_engineering.sub_agents.refinement import (
+    agent as refinement_agent_module,
+)
+from machine_learning_engineering.sub_agents.submission import (
+    agent as submission_agent_module,
+)
 
 
 def save_state(
-    callback_context: callback_context_module.CallbackContext
+    callback_context: callback_context_module.CallbackContext,
 ) -> Optional[types.Content]:
     """Prints the current state of the callback context."""
     workspace_dir = callback_context.state.get("workspace_dir", "")

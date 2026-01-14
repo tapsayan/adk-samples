@@ -1,14 +1,15 @@
-from datetime import datetime
 import os
+from datetime import datetime
+
 from google import genai
-from google.genai import types
 from google.adk.tools import ToolContext
 from google.cloud import storage
+from google.genai import types
+
 from .... import config
 
-
 client = genai.Client(
-    vertexai=True, project=os.environ.get("GOOGLE_CLOUD_PROJECT"),location="global"
+    vertexai=True, project=os.environ.get("GOOGLE_CLOUD_PROJECT"), location="global"
 )
 
 
@@ -26,13 +27,12 @@ async def generate_images(imagen_prompt: str, tool_context: ToolContext):
                 person_generation="allow_adult",
             ),
         )
-        generated_image_paths = []
         if response.generated_images is not None:
             for generated_image in response.generated_images:
                 # Get the image bytes
                 image_bytes = generated_image.image.image_bytes
                 counter = str(tool_context.state.get("loop_iteration", 0))
-                artifact_name = f"generated_image_" + counter + ".png"
+                artifact_name = f"generated_image_{counter}.png"
                 # call save to gcs function
                 if config.GCS_BUCKET_NAME:
                     save_to_gcs(tool_context, image_bytes, artifact_name, counter)
@@ -60,8 +60,7 @@ async def generate_images(imagen_prompt: str, tool_context: ToolContext):
             }
 
     except Exception as e:
-
-        return {"status": "error", "message": "No images generated.  {e}"}
+        return {"status": "error", "message": f"No images generated. {e}"}
 
 
 def save_to_gcs(tool_context: ToolContext, image_bytes, filename: str, counter: str):

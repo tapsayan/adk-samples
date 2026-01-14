@@ -1,19 +1,20 @@
 """Utility functions for leakage check agent."""
 
-from typing import Optional
-import json
 import functools
+import json
+from typing import Optional
 
 from google.adk import agents
 from google.adk.agents import callback_context as callback_context_module
-from google.adk.models import llm_response as llm_response_module
 from google.adk.models import llm_request as llm_request_module
+from google.adk.models import llm_response as llm_response_module
 from google.genai import types
-
-from machine_learning_engineering.shared_libraries import data_leakage_prompt
-from machine_learning_engineering.shared_libraries import code_util
-from machine_learning_engineering.shared_libraries import common_util
-from machine_learning_engineering.shared_libraries import config
+from machine_learning_engineering.shared_libraries import (
+    code_util,
+    common_util,
+    config,
+    data_leakage_prompt,
+)
 
 
 def get_check_leakage_agent_instruction(
@@ -50,11 +51,11 @@ def get_refine_leakage_agent_instruction(
 
 def parse_leakage_status(text: str) -> tuple[str, str]:
     """Parses the leakage status from the text."""
-    start_idx, end_idx = text.find("["), text.rfind("]")+1
+    start_idx, end_idx = text.find("["), text.rfind("]") + 1
     text = text[start_idx:end_idx]
     result = json.loads(text)[0]
     leakage_status = result["leakage_status"]
-    code_block = result["code_block"].replace(f"```python", "").replace("```", "")
+    code_block = result["code_block"].replace("```python", "").replace("```", "")
     return leakage_status, code_block
 
 
@@ -80,7 +81,7 @@ def update_extract_status(
             extract_status = True
         else:
             extract_status = code_block in code
-    except:
+    except Exception:
         code_block = ""
         extract_status = False
     extract_status_key = code_util.get_name_with_prefix_and_suffix(
