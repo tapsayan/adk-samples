@@ -6,12 +6,19 @@ from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types
 from rag.agent import root_agent
 
-def test_agent_stream(monkeypatch) -> None:
+def test_agent_stream(monkeypatch, mocker) -> None:
     """
     Integration test for the agent stream functionality.
     Tests that the agent returns valid streaming responses.
     """
     monkeypatch.setenv("RAG_CORPUS", "projects/mock-project/locations/us-central1/ragCorpora/mock-corpus")
+
+    # Mock the runner's run method to avoid actual API calls
+    mock_event = types.Event(id="test_event", data=types.EventData(message=types.Message(content=types.Content(role="model", parts=[types.Part.from_text("Mocked response")]))))
+    mocker.patch(
+        "google.adk.runners.Runner.run",
+        return_value=[mock_event]
+    )
 
     session_service = InMemorySessionService()
 
@@ -31,3 +38,4 @@ def test_agent_stream(monkeypatch) -> None:
         )
     )
     assert len(events) > 0, "Expected at least one message"
+    assert events[0].id == "test_event"

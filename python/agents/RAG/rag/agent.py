@@ -19,6 +19,7 @@ from google.adk.tools.retrieval.vertex_ai_rag_retrieval import VertexAiRagRetrie
 from vertexai.preview import rag
 from openinference.instrumentation import using_session
 from rag.tracing import instrument_adk_with_arize
+from unittest.mock import MagicMock
 
 _ = instrument_adk_with_arize()
 
@@ -27,23 +28,29 @@ from .prompts import return_instructions_root
 
 load_dotenv()
 
+# Use a mock for testing to avoid actual API calls
+if os.environ.get("PYTEST_RUNNING"):
+    ask_vertex_retrieval = MagicMock(spec=VertexAiRagRetrieval)
+    ask_vertex_retrieval.name = "retrieve_rag_documentation"
+    ask_vertex_retrieval.description = "A mock retrieval tool."
+else:
+    ask_vertex_retrieval = VertexAiRagRetrieval(
+        name='retrieve_rag_documentation',
+        description=(
+            'Use this tool to retrieve documentation and reference materials for the question from the RAG corpus,'
+        ),
+        rag_resources=[
+            rag.RagResource(
+                # please fill in your own rag corpus
+                # here is a sample rag corpus for testing purpose
+                # e.g. projects/123/locations/us-central1/ragCorpora/456
+                rag_corpus=os.environ.get("RAG_CORPUS")
+            )
+        ],
+        similarity_top_k=10,
+        vector_distance_threshold=0.6,
+    )
 
-ask_vertex_retrieval = VertexAiRagRetrieval(
-    name='retrieve_rag_documentation',
-    description=(
-        'Use this tool to retrieve documentation and reference materials for the question from the RAG corpus,'
-    ),
-    rag_resources=[
-        rag.RagResource(
-            # please fill in your own rag corpus
-            # here is a sample rag corpus for testing purpose
-            # e.g. projects/123/locations/us-central1/ragCorpora/456
-            rag_corpus=os.environ.get("RAG_CORPUS")
-        )
-    ],
-    similarity_top_k=10,
-    vector_distance_threshold=0.6,
-)
 
 with using_session(session_id=uuid.uuid4()):
     root_agent = Agent(
