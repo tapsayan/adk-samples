@@ -43,15 +43,8 @@ def server_fixture():
     server_process.terminate()
 
 
-@patch("rag.agent.root_agent.run_async")
-def test_chat_stream(mock_run_async, server_fixture: subprocess.Popen[str]) -> None:
+def test_chat_stream(server_fixture: subprocess.Popen[str]) -> None:
     """Test the chat stream functionality."""
-    # Mock the agent's async run method to return a dummy event
-    async def mock_stream(*args, **kwargs):
-        yield {"event": "message", "data": '{"id": "test", "message": {"content": {"role": "model", "parts": [{"text": "Mocked response"}]}} }'}
-
-    mock_run_async.return_value = mock_stream()
-    
     logger.info("Starting chat stream test")
 
     # Create session first

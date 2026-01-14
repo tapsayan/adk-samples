@@ -20,6 +20,8 @@ from vertexai.preview import rag
 from openinference.instrumentation import using_session
 from rag.tracing import instrument_adk_with_arize
 from unittest.mock import MagicMock
+from google.genai.types import GenerateContentResponse
+
 
 _ = instrument_adk_with_arize()
 
@@ -33,6 +35,17 @@ if os.environ.get("PYTEST_RUNNING"):
     ask_vertex_retrieval = MagicMock(spec=VertexAiRagRetrieval)
     ask_vertex_retrieval.name = "retrieve_rag_documentation"
     ask_vertex_retrieval.description = "A mock retrieval tool."
+    tools_to_use = [ask_vertex_retrieval]
+
+    mock_model = MagicMock()
+    mock_response_dict = {'candidates': [{'content': {'parts': [{'text': 'This is a mocked response.'}], 'role': 'model'}}]}
+    mock_response = GenerateContentResponse.from_dict(mock_response_dict)
+
+    async def mock_generate_content_async(*args, **kwargs):
+        yield mock_response
+
+    mock_model.generate_content_async = mock_generate_content_async
+    model_to_use = mock_model
 else:
     ask_vertex_retrieval = VertexAiRagRetrieval(
         name='retrieve_rag_documentation',
@@ -50,14 +63,14 @@ else:
         similarity_top_k=10,
         vector_distance_threshold=0.6,
     )
+    tools_to_use = [ask_vertex_retrieval]
+    model_to_use = 'gemini-2.0-flash-001'
 
 
 with using_session(session_id=uuid.uuid4()):
     root_agent = Agent(
-        model='gemini-2.0-flash-001',
+        model=model_to_use,
         name='ask_rag_agent',
         instruction=return_instructions_root(),
-        tools=[
-            ask_vertex_retrieval,
-        ]
+        tools=tools_to_use,
     )
