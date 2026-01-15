@@ -18,17 +18,21 @@ import asyncio
 import queue
 import re
 import threading
-from collections.abc import Iterator
-from typing import Any, AsyncGenerator, Callable, Optional
+from collections.abc import AsyncGenerator, Callable, Iterator
+from typing import Any, override
 
 import pydantic
 from google.adk import runners
-from google.adk.agents import base_agent, invocation_context, llm_agent, loop_agent
+from google.adk.agents import (
+    base_agent,
+    invocation_context,
+    llm_agent,
+    loop_agent,
+)
 from google.adk.events import event, event_actions
 from google.adk.models import base_llm
 from google.genai import types
 from pydantic.v1 import validators
-from typing_extensions import override
 
 from ..camel_library import function_types, result, security_policy
 from ..camel_library.capabilities import capabilities
@@ -119,7 +123,9 @@ class QuarantinedLlmService(BaseModel):
         )
 
         qllm_query = f"{query} \n\n output_schema: {output_schema}"
-        content = types.Content(role="user", parts=[types.Part(text=qllm_query)])
+        content = types.Content(
+            role="user", parts=[types.Part(text=qllm_query)]
+        )
 
         async for e in self.runner.run_async(
             user_id=qllm_session.user_id,  # Session object contains user_id
@@ -240,7 +246,9 @@ class QuarantinedLlmService(BaseModel):
             """
 
             if output_schema not in ["int", "str", "float", "bool"]:
-                raise ValueError(f"Unsupported output schema: `{output_schema}`")
+                raise ValueError(
+                    f"Unsupported output schema: `{output_schema}`"
+                )
 
             response_parts = []
 
@@ -268,7 +276,9 @@ class QuarantinedLlmService(BaseModel):
             elif output_schema == "bool":
                 return bool_validator(response_text)
             else:
-                raise ValueError(f"Unsupported output schema: `{output_schema}`")
+                raise ValueError(
+                    f"Unsupported output schema: `{output_schema}`"
+                )
 
         return query_ai_assistant
 
@@ -297,7 +307,14 @@ class CaMelInterpreterService(BaseModel):
         )  # Manages interactions with the QLLM.
 
         classes_to_exclude: frozenset[str] = frozenset(
-            {"datetime", "timedelta", "date", "time", "NaiveDatetime", "timezone"}
+            {
+                "datetime",
+                "timedelta",
+                "date",
+                "time",
+                "NaiveDatetime",
+                "timezone",
+            }
         )
 
         camel_tools = tools[:]
@@ -376,7 +393,9 @@ class CaMelInterpreterService(BaseModel):
             case result.Error(error):
                 error_obj = error
             case result.Ok(v_obj):
-                final_eval_output_str = v_obj.raw if v_obj.raw is not None else ""
+                final_eval_output_str = (
+                    v_obj.raw if v_obj.raw is not None else ""
+                )
 
         combined_output = f"{printed_output}\n{final_eval_output_str}".strip()
         return (
@@ -400,13 +419,14 @@ class CaMeLInterpreter(BaseAgent):
         name: str,
         camel_interpreter_service: CaMelInterpreterService,
     ):
-        super().__init__(name=name, camel_interpreter_service=camel_interpreter_service)
+        super().__init__(
+            name=name, camel_interpreter_service=camel_interpreter_service
+        )
 
     @override
     async def _run_async_impl(
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
-
         if "p_llm_code" not in ctx.session.state:
             # If the p_llm_code is not in the session state, then the PLLM agent did
             # not generate any code. This is an error and we should escalate.
@@ -451,7 +471,9 @@ class CaMeLInterpreter(BaseAgent):
                 error_reason = str(error.exception)
             else:
                 error_reason = str(error)
-            ctx.session.state.update(dict(eval_result=f"CODE ERROR: {error_reason}"))
+            ctx.session.state.update(
+                dict(eval_result=f"CODE ERROR: {error_reason}")
+            )
             yield Event(
                 author=self.name,
                 content=types.Content(
@@ -500,11 +522,10 @@ class CaMeLAgent(BaseAgent):
         model: str | BaseLlm = "gemini-2.5-pro",
         description: str = "",
         instruction: str = "",
-        tools: Optional[list[Tool]] = None,
+        tools: list[Tool] | None = None,
         security_policy_engine: SecurityPolicyEngine = security_policy.NoSecurityPolicyEngine(),
         eval_mode: DependenciesPropagationMode = DependenciesPropagationMode.NORMAL,
     ):
-
         camel_interpreter_service = CaMelInterpreterService(
             model=model,
             tools=tools or [],

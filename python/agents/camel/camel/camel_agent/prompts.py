@@ -20,7 +20,13 @@ import inspect
 import re
 import textwrap
 import types
-from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from typing import (
     Annotated,
     Any,
@@ -136,9 +142,7 @@ def _get_pydantic_model_code(
         type_annotation = _get_type_string(field.annotation)
         field_info = _extract_field_info_args(field)
         field_info_str = ", ".join(f"{k}={v}" for k, v in field_info.items())
-        field_code = (
-            f"{_INDENT}{field_name}: {type_annotation} = Field({field_info_str})"
-        )
+        field_code = f"{_INDENT}{field_name}: {type_annotation} = Field({field_info_str})"
 
         code_lines.append(field_code)
         _add_dependencies(field.annotation, dependencies)
@@ -270,7 +274,8 @@ def get_pydantic_types_definitions(
             isinstance(r_type, type)
             and not isinstance(r_type, types.GenericAlias)
             and (
-                issubclass(r_type, pydantic.BaseModel) or issubclass(r_type, enum.Enum)
+                issubclass(r_type, pydantic.BaseModel)
+                or issubclass(r_type, enum.Enum)
             )
         ):
             model_name = r_type.__name__
@@ -281,7 +286,10 @@ def get_pydantic_types_definitions(
             if (
                 isinstance(arg, type)
                 and not isinstance(arg, types.GenericAlias)
-                and (issubclass(arg, pydantic.BaseModel) or issubclass(arg, enum.Enum))
+                and (
+                    issubclass(arg, pydantic.BaseModel)
+                    or issubclass(arg, enum.Enum)
+                )
             ):
                 definitions |= get_code_recursive(arg)
     return definitions
@@ -433,10 +441,11 @@ def generate_camel_system_prompt(
     """Generates a system prompt with the provided functions."""
     function_definitions = (function_to_python_definition(f) for f in functions)
 
-    pydantic_types_definitions = get_pydantic_types_definitions(functions).values()
+    pydantic_types_definitions = get_pydantic_types_definitions(
+        functions
+    ).values()
 
     if pydantic_types_definitions:
-
         types_note = f"""
 ### Available types
 
@@ -552,12 +561,21 @@ class FunctionCall(BaseModel):
     """An optional dictionary of placeholder arguments to use in by ground truth agent in injection tasks."""
 
 
-FunctionCallArgTypes = str | int | float | bool | None | dict | list | FunctionCall
+FunctionCallArgTypes = (
+    str | int | float | bool | None | dict | list | FunctionCall
+)
 """Valid types for function call arguments."""
 
 
 FunctionReturnType: TypeAlias = (
-    BaseModel | Sequence["FunctionReturnType"] | dict | str | int | float | bool | None
+    BaseModel
+    | Sequence["FunctionReturnType"]
+    | dict
+    | str
+    | int
+    | float
+    | bool
+    | None
 )
 """Union of valid return types for functions. The default [FunctionsRuntime][agentdojo.functions_runtime.FunctionsRuntime]
 is not guaranteed to work with other types."""
@@ -589,7 +607,9 @@ def _parse_args(
             field_fn(
                 description=arg.description,
                 default=(
-                    ... if default_value == inspect.Parameter.empty else default_value
+                    ...
+                    if default_value == inspect.Parameter.empty
+                    else default_value
                 ),
             ),
         )
@@ -638,7 +658,9 @@ def make_function(function: Callable[..., T]) -> Function:
         raise ValueError(f"Function {function.__name__} has no docstring")
     function_docs = parse(function.__doc__)
     if function_docs.short_description is None:
-        raise ValueError(f"Function {function.__name__} has no short description")
+        raise ValueError(
+            f"Function {function.__name__} has no short description"
+        )
     return Function[P, T](
         name=function.__name__,
         call=function,
