@@ -35,7 +35,7 @@ from . import camel_value
 def camel_zip(
     *x: collections.abc.Iterable[typing.Any],
 ) -> list[tuple[typing.Any, ...]]:
-    return list(zip(*x))
+    return list(zip(*x, strict=True))
 
 
 _T = typing.TypeVar("_T")

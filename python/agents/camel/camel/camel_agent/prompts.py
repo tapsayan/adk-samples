@@ -31,7 +31,6 @@ from typing import (
     Annotated,
     Any,
     Concatenate,
-    TypeAlias,
     get_args,
     get_origin,
     get_type_hints,
@@ -168,7 +167,7 @@ def _get_enum_code(obj: type[enum.Enum]) -> str:
     return code
 
 
-TypesToRepresent: TypeAlias = pydantic.BaseModel | enum.Enum
+type TypesToRepresent = pydantic.BaseModel | enum.Enum
 
 
 def _get_code_and_dependencies(obj) -> tuple[str, set[type[TypesToRepresent]]]:
@@ -567,7 +566,7 @@ FunctionCallArgTypes = (
 """Valid types for function call arguments."""
 
 
-FunctionReturnType: TypeAlias = (
+type FunctionReturnType = (
     BaseModel
     | Sequence["FunctionReturnType"]
     | dict

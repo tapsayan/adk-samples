@@ -25,7 +25,7 @@ import dataclasses
 import enum
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any, Generic, NamedTuple, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, TypeVar
 
 import pydantic
 import pydantic.fields
@@ -35,7 +35,7 @@ from ..capabilities import capabilities as camel_capabilities
 from ..capabilities import readers, sources
 from . import camel_value, library
 
-ExceptionASTNodes: TypeAlias = ast.expr | ast.stmt | ast.excepthandler
+type ExceptionASTNodes = ast.expr | ast.stmt | ast.excepthandler
 
 _E = TypeVar("_E", bound=Exception)
 
@@ -76,7 +76,7 @@ CaMeLException(
 )"""
 
 
-CaMeLResult: TypeAlias = (
+type CaMeLResult = (
     result.Ok[camel_value.Value[Any]] | result.Error[CaMeLException[Exception]]
 )
 
@@ -909,7 +909,7 @@ def _eval_dict(
     result_dict = camel_value.CaMeLDict(
         {}, camel_capabilities.Capabilities.default(), ()
     )
-    for key, val in zip(node.keys, node.values):
+    for key, val in zip(node.keys, node.values, strict=True):
         if key is not None:
             evaled_key_res, namespace, tool_calls_chain, dependencies = (
                 camel_eval(
@@ -1117,9 +1117,9 @@ def _assign_tuple_list(
             tool_calls_chain,
             dependencies,
         )
-    for name, v in zip(names.elts, data_to_assign):
+    for name, value in zip(names.elts, data_to_assign, strict=True):
         assign_res, namespace, tool_calls_chain, dependencies = _assign(
-            v, name, namespace, tool_calls_chain, dependencies, eval_args
+            value, name, namespace, tool_calls_chain, dependencies, eval_args
         )
         if isinstance(assign_res, result.Error):
             return EvalResult(
@@ -1814,7 +1814,7 @@ def _eval_comprehensions(
             )
 
         for acc_res, rec_res in zip(
-            accumulated_results, recursive_res.value.python_value
+            accumulated_results, recursive_res.value.python_value, strict=True
         ):
             acc_res.python_value.extend(rec_res.python_value)
 
@@ -2004,7 +2004,7 @@ def _eval_dict_comp(
 
     keys, values = evaled_comprehension.iterate_python()
     elements = camel_value.CaMeLDict(
-        dict(zip(keys.iterate_python(), values.iterate_python())),
+        dict(zip(keys.iterate_python(), values.iterate_python(), strict=True)),
         camel_capabilities.Capabilities.camel(),
         evaled_iterators,
     )
@@ -2203,7 +2203,7 @@ def _make_error(
     )
 
 
-BinaryOp: TypeAlias = Callable[[camel_value.Value[Any]], camel_value.Value[Any]]
+type BinaryOp = Callable[[camel_value.Value[Any]], camel_value.Value[Any]]
 
 
 def is_bound(m: Callable[..., Any]) -> bool:

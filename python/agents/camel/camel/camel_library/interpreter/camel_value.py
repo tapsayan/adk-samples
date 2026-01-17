@@ -498,7 +498,9 @@ class CaMeLIterable(Generic[_IT, _V], Value[_IT]):
             return CaMeLFalse(
                 camel_capabilities.Capabilities.camel(), (self, value)
             )
-        for self_c, value_c in zip(self.python_value, value.python_value):
+        for self_c, value_c in zip(
+            self.python_value, value.python_value, strict=True
+        ):
             if not self_c.eq(value_c).raw:
                 return CaMeLFalse(
                     camel_capabilities.Capabilities.camel(), (self, value)
@@ -629,7 +631,7 @@ class CaMeLMapping(Generic[_MT, _KV, _VV], Value[_MT]):
                 camel_capabilities.Capabilities.camel(), (self, value)
             )
         for (self_k, self_v), (value_k, value_v) in zip(
-            self.python_value.items(), value.python_value.items()
+            self.python_value.items(), value.python_value.items(), strict=True
         ):
             if not self_k.eq(value_k).raw:
                 return CaMeLFalse(
@@ -1315,7 +1317,7 @@ class CaMeLList(
 
     @property
     def raw(self) -> list[Any]:
-        return list(v.raw for v in self.python_value)
+        return [v.raw for v in self.python_value]
 
     def attr(self, name) -> Value | None:
         attr = SUPPORTED_BUILT_IN_METHODS[self.raw_type].get(name)
@@ -1378,7 +1380,7 @@ class CaMeLSet(
 
     @property
     def raw(self) -> set[Any]:
-        return set(v.raw for v in self.python_value)
+        return {v.raw for v in self.python_value}
 
     def freeze(self) -> "CaMeLNone":
         _ = [el.freeze() for el in self.python_value]

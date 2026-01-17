@@ -23,7 +23,7 @@ import textwrap
 import types
 import typing
 from collections.abc import Iterable
-from typing import Any, TypeAlias
+from typing import Any
 
 import pydantic
 import pydantic.fields
@@ -142,7 +142,7 @@ def _get_enum_code(obj: type[enum.Enum]) -> str:
     return code
 
 
-TypesToRepresent: TypeAlias = pydantic.BaseModel | enum.Enum
+type TypesToRepresent = pydantic.BaseModel | enum.Enum
 
 
 def _get_code_and_dependencies(obj) -> tuple[str, set[type[TypesToRepresent]]]:
